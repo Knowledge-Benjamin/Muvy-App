@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useContext } from 'react';
 import { SocketContext } from '../context/SocketContext';
+import GoogleDriveUpload from './GoogleDriveUpload';
 
 const VideoPlayer = ({ roomId, isHost }) => {
     const { socket } = useContext(SocketContext);
@@ -230,21 +231,56 @@ const VideoPlayer = ({ roomId, isHost }) => {
                 </div>
             )}
             <div style={{ marginBottom: '10px' }}>
-                <input type="text" placeholder="Video URL (e.g. .mp4 link)" onChange={handleUrlChange} style={{ width: '60%', marginRight: '10px' }} />
-                <span>OR</span>
-                <input type="file" accept="video/*" onChange={handleFileChange} style={{ marginLeft: '10px' }} />
+                <input
+                    type="text"
+                    placeholder="Video URL (e.g. .mp4 link)"
+                    value={videoSrc}
+                    onChange={handleUrlChange}
+                    style={{ width: '100%', marginBottom: '10px' }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                    <span style={{ color: 'var(--accent-gold)' }}>Load from:</span>
+                    <input type="file" accept="video/*" onChange={handleFileChange} />
+                </div>
             </div>
+
+            <GoogleDriveUpload onLinkGenerated={(link) => {
+                setVideoSrc(link);
+                setMismatchWarning(false);
+                setLocalFingerprint(null);
+                if (socket) {
+                    socket.emit('video_url_change', { room: roomId, url: link });
+                }
+            }} />
+
             <br />
             {videoSrc && (
-                <video
-                    ref={videoRef}
-                    src={videoSrc}
-                    controls
-                    width="100%"
-                    onPlay={handlePlay}
-                    onPause={handlePause}
-                    onSeeked={handleSeek}
-                />
+                <>
+                    {videoSrc.includes('drive.google.com') ? (
+                        <iframe
+                            src={videoSrc}
+                            style={{
+                                width: '100%',
+                                height: '500px',
+                                border: 'none',
+                                borderRadius: 'var(--radius-md)',
+                                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+                                background: '#000'
+                            }}
+                            allow="autoplay"
+                        />
+                    ) : (
+                        <video
+                            ref={videoRef}
+                            src={videoSrc}
+                            controls
+                            width="100%"
+                            onPlay={handlePlay}
+                            onPause={handlePause}
+                            onSeeked={handleSeek}
+                        />
+                    )}
+                </>
             )}
         </div>
     );

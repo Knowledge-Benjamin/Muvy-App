@@ -7,4 +7,13 @@ export default defineConfig({
     define: {
         global: 'window', // Polyfill global for simple-peer
     },
+    resolve: {
+        alias: {
+            events: 'events',
+            util: 'util',
+        },
+    },
+    optimizeDeps: {
+        include: ['events', 'util'],
+    },
 })
