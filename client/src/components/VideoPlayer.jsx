@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useContext } from 'react';
 import { SocketContext } from '../context/SocketContext';
 import GoogleDriveUpload from './GoogleDriveUpload';
+import DropboxUpload from './DropboxUpload';
 
 const VideoPlayer = ({ roomId, isHost }) => {
     const { socket } = useContext(SocketContext);
@@ -245,6 +246,15 @@ const VideoPlayer = ({ roomId, isHost }) => {
             </div>
 
             <GoogleDriveUpload onLinkGenerated={(link) => {
+                setVideoSrc(link);
+                setMismatchWarning(false);
+                setLocalFingerprint(null);
+                if (socket) {
+                    socket.emit('video_url_change', { room: roomId, url: link });
+                }
+            }} />
+
+            <DropboxUpload onLinkGenerated={(link) => {
                 setVideoSrc(link);
                 setMismatchWarning(false);
                 setLocalFingerprint(null);
