@@ -75,6 +75,12 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
                 videoRef.current.play();
                 setIsPlaying(true);
                 checkMismatch(data.duration);
+
+                // Show toast notification
+                const userId = data.userId ? data.userId.substring(0, 8) : 'Someone';
+                setNotification(`▶️ ${userId} played the video`);
+                setTimeout(() => setNotification(''), 3000);
+
                 setTimeout(() => {
                     isRemoteUpdate.current = false;
                 }, 500);
@@ -88,6 +94,12 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
                 videoRef.current.pause();
                 setIsPlaying(false);
                 checkMismatch(data.duration);
+
+                // Show toast notification
+                const userId = data.userId ? data.userId.substring(0, 8) : 'Someone';
+                setNotification(`⏸️ ${userId} paused the video`);
+                setTimeout(() => setNotification(''), 3000);
+
                 setTimeout(() => {
                     isRemoteUpdate.current = false;
                 }, 500);
@@ -99,6 +111,14 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
                 isRemoteUpdate.current = true;
                 videoRef.current.currentTime = data.time;
                 checkMismatch(data.duration);
+
+                // Show toast notification
+                const userId = data.userId ? data.userId.substring(0, 8) : 'Someone';
+                const minutes = Math.floor(data.time / 60);
+                const seconds = Math.floor(data.time % 60);
+                setNotification(`⏩ ${userId} seeked to ${minutes}:${seconds.toString().padStart(2, '0')}`);
+                setTimeout(() => setNotification(''), 3000);
+
                 setTimeout(() => {
                     isRemoteUpdate.current = false;
                 }, 500);

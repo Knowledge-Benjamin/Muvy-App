@@ -44,7 +44,7 @@ module.exports = (io) => {
             rooms[data.room].videoTime = data.time;
             rooms[data.room].lastTimestamp = data.timestamp;
 
-            socket.to(data.room).emit('receive_play', data);
+            socket.to(data.room).emit('receive_play', { ...data, userId: socket.id });
         });
 
         socket.on('pause_video', (data) => {
@@ -52,14 +52,14 @@ module.exports = (io) => {
             rooms[data.room].isPlaying = false;
             rooms[data.room].videoTime = data.time;
 
-            socket.to(data.room).emit('receive_pause', data);
+            socket.to(data.room).emit('receive_pause', { ...data, userId: socket.id });
         });
 
         socket.on('seek_video', (data) => {
             if (!rooms[data.room]) rooms[data.room] = {};
             rooms[data.room].videoTime = data.time;
 
-            socket.to(data.room).emit('receive_seek', data);
+            socket.to(data.room).emit('receive_seek', { ...data, userId: socket.id });
         });
 
         socket.on('video_url_change', (data) => {
