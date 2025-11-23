@@ -49,7 +49,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
     useEffect(() => {
         if (!socket) return;
 
-        socket.on('file_loaded', (data) => {
+        socket.on('receive_file_loaded', (data) => {
             setNotification(`${data.fileName} loaded by another user`);
             setRemoteFingerprint(data.fingerprint);
             if (localFingerprint) {
@@ -62,13 +62,13 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
             setTimeout(() => setNotification(''), 3000);
         });
 
-        socket.on('video_url_change', (data) => {
+        socket.on('receive_url_change', (data) => {
             setVideoSrc(data.url);
             setMismatchWarning(false);
             setLocalFingerprint(null);
         });
 
-        socket.on('play_video', (data) => {
+        socket.on('receive_play', (data) => {
             if (videoRef.current) {
                 isRemoteUpdate.current = true;
                 videoRef.current.currentTime = data.time;
@@ -81,7 +81,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
             }
         });
 
-        socket.on('pause_video', (data) => {
+        socket.on('receive_pause', (data) => {
             if (videoRef.current) {
                 isRemoteUpdate.current = true;
                 videoRef.current.currentTime = data.time;
@@ -94,7 +94,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
             }
         });
 
-        socket.on('seek_video', (data) => {
+        socket.on('receive_seek', (data) => {
             if (videoRef.current) {
                 isRemoteUpdate.current = true;
                 videoRef.current.currentTime = data.time;
@@ -106,11 +106,11 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
         });
 
         return () => {
-            socket.off('file_loaded');
-            socket.off('video_url_change');
-            socket.off('play_video');
-            socket.off('pause_video');
-            socket.off('seek_video');
+            socket.off('receive_file_loaded');
+            socket.off('receive_url_change');
+            socket.off('receive_play');
+            socket.off('receive_pause');
+            socket.off('receive_seek');
         };
     }, [socket, localFingerprint, remoteFingerprint]);
 
