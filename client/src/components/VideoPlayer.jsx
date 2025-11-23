@@ -158,6 +158,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
 
     const handlePause = () => {
         if (isRemoteUpdate.current) return;
+        setIsPlaying(false);
         if (socket) {
             socket.emit('pause_video', {
                 room: roomId,
