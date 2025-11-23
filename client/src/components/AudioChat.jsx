@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useContext } from 'react';
 import Peer from 'simple-peer';
 import { SocketContext } from '../context/SocketContext';
+import { Mic, MicOff } from 'lucide-react';
 
 const AudioChat = ({ roomId }) => {
     const { socket, stream, me } = useContext(SocketContext);
@@ -74,9 +75,10 @@ const AudioChat = ({ roomId }) => {
     const [isMuted, setIsMuted] = useState(false);
 
     const toggleMute = () => {
-        if (stream) {
-            stream.getAudioTracks()[0].enabled = !stream.getAudioTracks()[0].enabled;
-            setIsMuted(!stream.getAudioTracks()[0].enabled);
+        if (stream && stream.getAudioTracks().length > 0) {
+            const audioTrack = stream.getAudioTracks()[0];
+            audioTrack.enabled = !audioTrack.enabled;
+            setIsMuted(!audioTrack.enabled);
         }
     };
 
@@ -84,8 +86,17 @@ const AudioChat = ({ roomId }) => {
         <div className="audio-chat">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3>Audio Chat ({peers.length} peers)</h3>
-                <button onClick={toggleMute}>
-                    {isMuted ? "Unmute Mic" : "Mute Mic"}
+                <button
+                    onClick={toggleMute}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: 'var(--spacing-sm) var(--spacing-md)'
+                    }}
+                    title={isMuted ? "Unmute Microphone" : "Mute Microphone"}
+                >
+                    {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
                 </button>
             </div>
             {peers.map((peer, index) => {

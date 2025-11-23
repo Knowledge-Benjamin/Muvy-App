@@ -2,6 +2,9 @@ import React, { useState, useContext } from 'react';
 import { SocketContext } from './context/SocketContext';
 import VideoPlayer from './components/VideoPlayer';
 import AudioChat from './components/AudioChat';
+import GoogleDriveUpload from './components/GoogleDriveUpload';
+import DropboxUpload from './components/DropboxUpload';
+import { Home, Users, Crown, User, Upload, ChevronDown, Monitor } from 'lucide-react';
 import './App.css';
 
 function App() {
@@ -10,6 +13,8 @@ function App() {
     const [joined, setJoined] = useState(false);
     const [hostId, setHostId] = useState('');
     const [userCount, setUserCount] = useState(0);
+    const [showUploadPanel, setShowUploadPanel] = useState(false);
+    const [videoSrc, setVideoSrc] = useState('');
 
     const handleJoin = () => {
         if (roomId.trim() && socket) {
@@ -33,6 +38,11 @@ function App() {
 
     const isHost = socket && socket.id === hostId;
 
+    const handleLinkGenerated = (link) => {
+        setVideoSrc(link);
+        setShowUploadPanel(false);
+    };
+
     return (
         <div className="App">
             <h1>Muvy - Watch Together</h1>
@@ -48,24 +58,56 @@ function App() {
                 </div>
             ) : (
                 <div className="room-screen">
-                    <div className="room-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', padding: '10px', background: '#333', borderRadius: '8px' }}>
-                        <h2>Room: {roomId}</h2>
-                        <div className="room-info">
-                            <span style={{ marginRight: '15px' }}>👥 Users: {userCount}</span>
-                            <span style={{
-                                padding: '5px 10px',
-                                borderRadius: '4px',
-                                background: isHost ? '#4caf50' : '#2196f3',
-                                color: 'white',
-                                fontWeight: 'bold'
-                            }}>
-                                {isHost ? '👑 You are Host' : '👤 Viewer'}
+                    {/* Top Panel */}
+                    <div className="top-panel">
+                        <div className="top-panel-left">
+                            <h1>Muvy</h1>
+                        </div>
+                        <div className="top-panel-center">
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <Home size={14} /> {roomId}
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <Users size={14} /> {userCount}
+                            </span>
+                            <span className="host-badge">
+                                {isHost ? <><Crown size={14} /> Host</> : <><User size={14} /> Viewer</>}
                             </span>
                         </div>
+                        <button
+                            className="upload-toggle-btn"
+                            onClick={() => setShowUploadPanel(!showUploadPanel)}
+                        >
+                            <Upload size={16} />
+                            <span>Upload</span>
+                            <ChevronDown size={16} style={{ transform: showUploadPanel ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }} />
+                        </button>
                     </div>
-                    <div className="content">
-                        <VideoPlayer roomId={roomId} isHost={isHost} />
-                        <AudioChat roomId={roomId} />
+
+                    {/* Upload Panel (Collapsible) */}
+                    {showUploadPanel && (
+                        <div className="upload-panel">
+                            <div className="upload-options">
+                                <div className="upload-section">
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Monitor size={16} /> Local File
+                                    </label>
+                                    <input type="file" accept="video/*" />
+                                </div>
+                                <GoogleDriveUpload onLinkGenerated={handleLinkGenerated} />
+                                <DropboxUpload onLinkGenerated={handleLinkGenerated} />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Main Content */}
+                    <div className="main-content">
+                        <div className="video-section">
+                            <VideoPlayer roomId={roomId} isHost={isHost} videoSrc={videoSrc} setVideoSrc={setVideoSrc} />
+                        </div>
+                        <div className="audio-sidebar">
+                            <AudioChat roomId={roomId} />
+                        </div>
                     </div>
                 </div>
             )}
