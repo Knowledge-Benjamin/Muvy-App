@@ -260,7 +260,7 @@ const GoogleDriveUpload = ({ onLinkGenerated }) => {
                                 <div style={{
                                     width: `${uploadProgress}%`,
                                     height: '100%',
-                                    background: 'var(--primary-orange)',
+                                    background: 'var(--white)',
                                     transition: 'width 0.3s ease'
                                 }} />
                             </div>
@@ -271,8 +271,8 @@ const GoogleDriveUpload = ({ onLinkGenerated }) => {
                                 onClick={openPicker}
                                 style={{
                                     padding: '10px 20px',
-                                    background: 'var(--primary-orange)',
-                                    color: 'white',
+                                    background: 'var(--white)',
+                                    color: 'var(--black)',
                                     border: 'none',
                                     borderRadius: '6px',
                                     cursor: 'pointer',

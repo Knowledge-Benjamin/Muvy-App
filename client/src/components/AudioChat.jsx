@@ -21,6 +21,17 @@ const AudioChat = ({ roomId }) => {
             setPeers(users => [...users, { peerID: userId, peer }]);
         });
 
+        socket.on('user_left', (userId) => {
+            console.log('User left:', userId);
+            const peerObj = peersRef.current.find(p => p.peerID === userId);
+            if (peerObj) {
+                peerObj.peer.destroy();
+            }
+            const peers = peersRef.current.filter(p => p.peerID !== userId);
+            peersRef.current = peers;
+            setPeers(peers);
+        });
+
         socket.on('signal', (data) => {
             console.log('Received signal from:', data.from);
             const item = peersRef.current.find(p => p.peerID === data.from);
@@ -38,6 +49,7 @@ const AudioChat = ({ roomId }) => {
 
         return () => {
             socket.off('user_joined');
+            socket.off('user_left');
             socket.off('signal');
         };
     }, [socket, stream]);

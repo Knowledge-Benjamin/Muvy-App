@@ -113,6 +113,9 @@ module.exports = (io) => {
                         hostId: rooms[roomId].hostId,
                         userCount: roomSize
                     });
+
+                    // Notify others that this user left (for WebRTC cleanup)
+                    socket.to(roomId).emit('user_left', socket.id);
                 }
             }
         });

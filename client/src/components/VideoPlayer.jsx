@@ -10,33 +10,8 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
 
     const [notification, setNotification] = useState('');
     const [mismatchWarning, setMismatchWarning] = useState(false);
-    const [remoteFingerprint, setRemoteFingerprint] = useState(null);
-    const [localFingerprint, setLocalFingerprint] = useState(null);
-
-    const generateFingerprint = async (file) => {
-        const chunkSize = 2048;
-        const startChunk = file.slice(0, chunkSize);
-        const endChunk = file.slice(Math.max(0, file.size - chunkSize), file.size);
-
-        const startBuffer = await startChunk.arrayBuffer();
-        const endBuffer = await endChunk.arrayBuffer();
-
-        const startView = new Uint8Array(startBuffer);
-        const endView = new Uint8Array(endBuffer);
-
-        let sum = 0;
-        startView.forEach(b => sum += b);
-        endView.forEach(b => sum += b);
-
-        return `${file.size}-${startView[0]}-${endView[endView.length - 1]}-${sum}`;
-    };
 
     const checkMismatch = (remoteDuration) => {
-        if (localFingerprint && remoteFingerprint && localFingerprint !== remoteFingerprint) {
-            setMismatchWarning(true);
-            return;
-        }
-
         if (!videoRef.current) return;
         const localDuration = videoRef.current.duration;
         if (Math.abs(localDuration - remoteDuration) > 1) {
@@ -49,23 +24,9 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
     useEffect(() => {
         if (!socket) return;
 
-        socket.on('receive_file_loaded', (data) => {
-            setNotification(`${data.fileName} loaded by another user`);
-            setRemoteFingerprint(data.fingerprint);
-            if (localFingerprint) {
-                if (localFingerprint !== data.fingerprint) {
-                    setMismatchWarning(true);
-                } else {
-                    setMismatchWarning(false);
-                }
-            }
-            setTimeout(() => setNotification(''), 3000);
-        });
-
         socket.on('receive_url_change', (data) => {
             setVideoSrc(data.url);
             setMismatchWarning(false);
-            setLocalFingerprint(null);
         });
 
         socket.on('receive_play', (data) => {
@@ -126,13 +87,12 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
         });
 
         return () => {
-            socket.off('receive_file_loaded');
             socket.off('receive_url_change');
             socket.off('receive_play');
             socket.off('receive_pause');
             socket.off('receive_seek');
         };
-    }, [socket, localFingerprint, remoteFingerprint]);
+    }, [socket]);
 
     const handlePlayPause = () => {
         if (videoRef.current) {
