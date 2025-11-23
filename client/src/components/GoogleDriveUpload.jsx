@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { FolderOpen, Lock, Check, Upload } from 'lucide-react';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || 'YOUR_API_KEY'; // We'll need to add this
@@ -195,46 +196,49 @@ const GoogleDriveUpload = ({ onLinkGenerated }) => {
     };
 
     if (!tokenClient) {
-        return <div style={{ padding: '10px', color: '#888' }}>Loading Google Drive...</div>;
+        return <div style={{ padding: '0.625rem', color: 'var(--gray-400)', fontSize: '0.75rem' }}>Loading Google Drive...</div>;
     }
 
     return (
-        <div style={{ marginTop: '10px', padding: '15px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px' }}>
-            <h4 style={{ margin: '0 0 10px 0', color: 'var(--accent-gold)', fontSize: '1rem' }}>
-                📁 Google Drive
-            </h4>
+        <div className="upload-section">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <FolderOpen size={16} /> Google Drive
+            </label>
 
             {!isSignedIn ? (
                 <button
                     onClick={handleSignIn}
                     style={{
-                        padding: '10px 20px',
-                        background: '#4285f4',
-                        color: 'white',
+                        padding: '0.625rem 1.25rem',
+                        background: 'var(--white)',
+                        color: 'var(--black)',
                         border: 'none',
-                        borderRadius: '6px',
+                        borderRadius: 'var(--radius-sm)',
                         cursor: 'pointer',
                         fontWeight: '600',
-                        fontSize: '0.9rem'
+                        fontSize: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
                     }}
                 >
-                    🔐 Sign in with Google
+                    <Lock size={16} /> Sign in with Google
                 </button>
             ) : (
                 <div>
-                    <div style={{ marginBottom: '10px', fontSize: '0.9rem' }}>
-                        ✅ Signed in to Google Drive
+                    <div style={{ marginBottom: '0.625rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Check size={14} /> Signed in to Google Drive
                         <button
                             onClick={handleSignOut}
                             style={{
-                                marginLeft: '10px',
-                                padding: '5px 10px',
+                                marginLeft: '0.625rem',
+                                padding: '0.3rem 0.625rem',
                                 background: 'transparent',
-                                color: 'var(--accent-gold)',
-                                border: '1px solid var(--accent-gold)',
-                                borderRadius: '4px',
+                                color: 'var(--white)',
+                                border: '1px solid var(--gray-300)',
+                                borderRadius: 'var(--radius-sm)',
                                 cursor: 'pointer',
-                                fontSize: '0.8rem'
+                                fontSize: '0.7rem'
                             }}
                         >
                             Sign Out
@@ -289,21 +293,24 @@ const GoogleDriveUpload = ({ onLinkGenerated }) => {
                             <label
                                 htmlFor="drive-upload-input"
                                 style={{
-                                    display: 'inline-block',
-                                    padding: '10px 20px',
-                                    background: 'var(--primary-red)',
-                                    color: 'white',
-                                    borderRadius: '6px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    padding: '0.625rem 1.25rem',
+                                    background: 'transparent',
+                                    color: 'var(--white)',
+                                    border: '1px solid var(--gray-300)',
+                                    borderRadius: 'var(--radius-sm)',
                                     cursor: 'pointer',
                                     fontWeight: '600',
-                                    fontSize: '0.9rem'
+                                    fontSize: '0.75rem'
                                 }}
                             >
-                                📤 Upload New Video
+                                <Upload size={16} /> Upload New Video
                             </label>
                         </div>
                     )}
-                    <p style={{ margin: '10px 0 0 0', fontSize: '0.8rem', color: '#888' }}>
+                    <p style={{ margin: '0.625rem 0 0 0', fontSize: '0.7rem', color: 'var(--gray-400)' }}>
                         Pick an existing video or upload a new one to your Drive
                     </p>
                 </div>

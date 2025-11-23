@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Lock, Folder, Upload, Check, X, RotateCw, Sparkles } from 'lucide-react';
 
 const DROPBOX_APP_KEY = import.meta.env.VITE_DROPBOX_APP_KEY;
 
@@ -249,65 +250,71 @@ const DropboxUpload = ({ onLinkGenerated }) => {
     };
 
     return (
-        <div style={{ marginTop: '10px', padding: '15px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px' }}>
-            <h4 style={{ margin: '0 0 10px 0', color: 'var(--accent-gold)', fontSize: '1rem' }}>
-                📦 Dropbox (Perfect Sync)
-            </h4>
+        <div className="upload-section">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <Folder size={16} /> Dropbox (Perfect Sync)
+            </label>
 
             {!isAuthenticated ? (
                 <div>
                     <button
                         onClick={handleAuth}
                         style={{
-                            padding: '10px 20px',
-                            background: '#0061FF',
-                            color: 'white',
+                            padding: '0.625rem 1.25rem',
+                            background: 'var(--white)',
+                            color: 'var(--black)',
                             border: 'none',
-                            borderRadius: '6px',
+                            borderRadius: 'var(--radius-sm)',
                             cursor: 'pointer',
                             fontWeight: '600',
-                            fontSize: '0.9rem',
-                            marginBottom: '10px'
+                            fontSize: '0.75rem',
+                            marginBottom: '0.625rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
                         }}
                     >
-                        🔐 Sign in with Dropbox
+                        <Lock size={16} /> Sign in with Dropbox
                     </button>
                     <div style={{ marginTop: '10px' }}>
                         <button
                             onClick={openChooser}
                             style={{
-                                padding: '10px 20px',
+                                padding: '0.625rem 1.25rem',
                                 background: 'transparent',
-                                color: 'var(--accent-gold)',
-                                border: '1px solid var(--accent-gold)',
-                                borderRadius: '6px',
+                                color: 'var(--white)',
+                                border: '1px solid var(--gray-300)',
+                                borderRadius: 'var(--radius-sm)',
                                 cursor: 'pointer',
                                 fontWeight: '600',
-                                fontSize: '0.9rem'
+                                fontSize: '0.75rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
                             }}
                         >
-                            📂 Browse Public Dropbox Files
+                            <Folder size={16} /> Browse Public Dropbox Files
                         </button>
-                        <p style={{ margin: '5px 0 0 0', fontSize: '0.75rem', color: '#888' }}>
+                        <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.7rem', color: 'var(--gray-400)' }}>
                             (No sign-in needed for public files)
                         </p>
                     </div>
                 </div>
             ) : (
                 <div>
-                    <div style={{ marginBottom: '10px', fontSize: '0.9rem' }}>
-                        ✅ Signed in to Dropbox
+                    <div style={{ marginBottom: '0.625rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Check size={14} /> Signed in to Dropbox
                         <button
                             onClick={handleSignOut}
                             style={{
-                                marginLeft: '10px',
-                                padding: '5px 10px',
+                                marginLeft: '0.625rem',
+                                padding: '0.3rem 0.625rem',
                                 background: 'transparent',
-                                color: 'var(--accent-gold)',
-                                border: '1px solid var(--accent-gold)',
-                                borderRadius: '4px',
+                                color: 'var(--white)',
+                                border: '1px solid var(--gray-300)',
+                                borderRadius: 'var(--radius-sm)',
                                 cursor: 'pointer',
-                                fontSize: '0.8rem'
+                                fontSize: '0.7rem'
                             }}
                         >
                             Sign Out
@@ -316,84 +323,96 @@ const DropboxUpload = ({ onLinkGenerated }) => {
 
                     {uploadError && (
                         <div style={{
-                            padding: '10px',
-                            background: 'rgba(191, 26, 26, 0.2)',
-                            border: '1px solid var(--primary-red)',
-                            borderRadius: '6px',
-                            marginBottom: '10px',
-                            fontSize: '0.85rem',
-                            color: 'var(--primary-red)',
-                            lineHeight: '1.4'
+                            padding: '0.625rem',
+                            background: 'var(--gray-100)',
+                            border: '1px solid var(--white)',
+                            borderRadius: 'var(--radius-sm)',
+                            marginBottom: '0.625rem',
+                            fontSize: '0.7rem',
+                            color: 'var(--white)',
+                            lineHeight: '1.4',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
                         }}>
-                            ❌ {uploadError}
+                            <X size={14} /> {uploadError}
                             <button
                                 onClick={retryUpload}
                                 style={{
-                                    marginLeft: '10px',
-                                    padding: '5px 15px',
-                                    background: 'var(--primary-red)',
-                                    color: 'white',
+                                    marginLeft: 'auto',
+                                    padding: '0.3rem 0.9rem',
+                                    background: 'var(--white)',
+                                    color: 'var(--black)',
                                     border: 'none',
-                                    borderRadius: '4px',
+                                    borderRadius: 'var(--radius-sm)',
                                     cursor: 'pointer',
-                                    fontSize: '0.8rem'
+                                    fontSize: '0.7rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem'
                                 }}
                             >
-                                🔄 Retry
+                                <RotateCw size={12} /> Retry
                             </button>
                         </div>
                     )}
 
                     {isUploading ? (
                         <div>
-                            <div style={{ marginBottom: '5px', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ marginBottom: '0.3rem', fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span>Uploading... {uploadProgress}%</span>
                                 <button
                                     onClick={cancelUpload}
                                     style={{
-                                        padding: '5px 15px',
+                                        padding: '0.3rem 0.9rem',
                                         background: 'transparent',
-                                        color: 'var(--primary-red)',
-                                        border: '1px solid var(--primary-red)',
-                                        borderRadius: '4px',
+                                        color: 'var(--white)',
+                                        border: '1px solid var(--gray-300)',
+                                        borderRadius: 'var(--radius-sm)',
                                         cursor: 'pointer',
-                                        fontSize: '0.8rem'
+                                        fontSize: '0.7rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.3rem'
                                     }}
                                 >
-                                    ✖ Cancel
+                                    <X size={12} /> Cancel
                                 </button>
                             </div>
                             <div style={{
                                 width: '100%',
-                                height: '8px',
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                borderRadius: '4px',
+                                height: '0.5rem',
+                                background: 'var(--gray-100)',
+                                borderRadius: 'var(--radius-sm)',
                                 overflow: 'hidden'
                             }}>
                                 <div style={{
                                     width: `${uploadProgress}%`,
                                     height: '100%',
-                                    background: 'var(--primary-orange)',
+                                    background: 'var(--white)',
                                     transition: 'width 0.3s ease'
                                 }} />
                             </div>
                         </div>
                     ) : (
-                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
                             <button
                                 onClick={openChooser}
                                 style={{
-                                    padding: '10px 20px',
-                                    background: 'var(--primary-orange)',
-                                    color: 'white',
+                                    padding: '0.625rem 1.25rem',
+                                    background: 'var(--white)',
+                                    color: 'var(--black)',
                                     border: 'none',
-                                    borderRadius: '6px',
+                                    borderRadius: 'var(--radius-sm)',
                                     cursor: 'pointer',
                                     fontWeight: '600',
-                                    fontSize: '0.9rem'
+                                    fontSize: '0.75rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
                                 }}
                             >
-                                📂 Browse My Dropbox
+                                <Folder size={16} /> Browse My Dropbox
                             </button>
 
                             <input
@@ -406,22 +425,25 @@ const DropboxUpload = ({ onLinkGenerated }) => {
                             <label
                                 htmlFor="dropbox-upload-input"
                                 style={{
-                                    display: 'inline-block',
-                                    padding: '10px 20px',
-                                    background: 'var(--primary-red)',
-                                    color: 'white',
-                                    borderRadius: '6px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    padding: '0.625rem 1.25rem',
+                                    background: 'transparent',
+                                    color: 'var(--white)',
+                                    border: '1px solid var(--gray-300)',
+                                    borderRadius: 'var(--radius-sm)',
                                     cursor: 'pointer',
                                     fontWeight: '600',
-                                    fontSize: '0.9rem'
+                                    fontSize: '0.75rem'
                                 }}
                             >
-                                📤 Upload to Dropbox
+                                <Upload size={16} /> Upload to Dropbox
                             </label>
                         </div>
                     )}
-                    <p style={{ margin: '10px 0 0 0', fontSize: '0.8rem', color: '#888' }}>
-                        ✨ Dropbox links work perfectly with video sync!
+                    <p style={{ margin: '0.625rem 0 0 0', fontSize: '0.7rem', color: 'var(--gray-400)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <Sparkles size={12} /> Dropbox links work perfectly with video sync!
                     </p>
                 </div>
             )}
