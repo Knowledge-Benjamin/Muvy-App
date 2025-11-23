@@ -41,6 +41,10 @@ function App() {
     const handleLinkGenerated = (link) => {
         setVideoSrc(link);
         setShowUploadPanel(false);
+        // Emit URL change to sync with other users in the room
+        if (socket && roomId) {
+            socket.emit('video_url_change', { room: roomId, url: link });
+        }
     };
 
     return (
@@ -90,9 +94,23 @@ function App() {
                             <div className="upload-options">
                                 <div className="upload-section">
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Monitor size={16} /> Local File
+                                        <Monitor size={16} /> Local File (Your Device Only)
                                     </label>
-                                    <input type="file" accept="video/*" />
+                                    <input
+                                        type="file"
+                                        accept="video/*"
+                                        onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (file) {
+                                                const localUrl = URL.createObjectURL(file);
+                                                setVideoSrc(localUrl);
+                                                alert('⚠️ Local files only work on YOUR device.\n\nTo watch together with others, please upload to Dropbox or Google Drive instead.');
+                                            }
+                                        }}
+                                    />
+                                    <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.7rem', color: 'var(--gray-400)' }}>
+                                        Note: Local files won't sync to other users. Use Dropbox/Google Drive for sharing.
+                                    </p>
                                 </div>
                                 <GoogleDriveUpload onLinkGenerated={handleLinkGenerated} />
                                 <DropboxUpload onLinkGenerated={handleLinkGenerated} />
