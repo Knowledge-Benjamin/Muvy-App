@@ -4,9 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "dev": "vite --mode development",
+    "build": "tsc && vite build --mode production",
+    "build:dev": "tsc && vite build --mode development",
+    "preview": "vite preview",
+    "android:build": "npm run build && npx cap sync android",
+    "android:build:dev": "npm run build:dev && npx cap sync android",
+    "android:open": "npx cap open android"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.1.1",
@@ -14,6 +18,11 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/app": "^7.1.0",
+    "@capacitor/cli": "^7.4.4",
+    "@capacitor/core": "^7.4.4",
+    "@capacitor/network": "^7.0.2",
     "@google/generative-ai": "^0.24.1",
     "events": "^3.3.0",
     "gapi-script": "^1.2.0",

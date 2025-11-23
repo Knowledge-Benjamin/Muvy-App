@@ -19,6 +19,14 @@ dist-ssr
 .DS_Store
 *.suo
 *.ntvs*
-*.njsproj
+*.njsproj*
 *.sln
 *.sw?
+
+# Environment variables
+.env
+.env.local
+
+# Capacitor
+android/
+ios/
