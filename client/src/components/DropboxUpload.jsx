@@ -144,7 +144,8 @@ const DropboxUpload = ({ onLinkGenerated }) => {
                     const data = JSON.parse(xhr.responseText);
 
                     try {
-                        const linkResponse = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+                        // First, try to list existing shared links
+                        const listResponse = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
                             method: 'POST',
                             headers: {
                                 'Authorization': `Bearer ${accessToken}`,
@@ -152,16 +153,70 @@ const DropboxUpload = ({ onLinkGenerated }) => {
                             },
                             body: JSON.stringify({
                                 path: data.path_display,
-                                settings: { requested_visibility: 'public' },
+                                direct_only: true
                             }),
                         });
 
-                        if (!linkResponse.ok) {
-                            throw new Error('Failed to create share link');
+                        let directLink;
+
+                        if (listResponse.ok) {
+                            const listData = await listResponse.json();
+
+                            // If link already exists, use it
+                            if (listData.links && listData.links.length > 0) {
+                                directLink = listData.links[0].url;
+                            } else {
+                                // No existing link, create a new one
+                                const createResponse = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Authorization': `Bearer ${accessToken}`,
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                        path: data.path_display,
+                                        settings: { requested_visibility: 'public' },
+                                    }),
+                                });
+
+                                if (!createResponse.ok) {
+                                    const errorData = await createResponse.json();
+
+                                    // If link already exists (race condition), list again
+                                    if (errorData.error && errorData.error['.tag'] === 'shared_link_already_exists') {
+                                        const retryList = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Authorization': `Bearer ${accessToken}`,
+                                                'Content-Type': 'application/json',
+                                            },
+                                            body: JSON.stringify({
+                                                path: data.path_display,
+                                                direct_only: true
+                                            }),
+                                        });
+
+                                        if (retryList.ok) {
+                                            const retryData = await retryList.json();
+                                            if (retryData.links && retryData.links.length > 0) {
+                                                directLink = retryData.links[0].url;
+                                            }
+                                        }
+                                    }
+
+                                    if (!directLink) {
+                                        throw new Error('Failed to create or retrieve share link');
+                                    }
+                                } else {
+                                    const createData = await createResponse.json();
+                                    directLink = createData.url;
+                                }
+                            }
+                        } else {
+                            throw new Error('Failed to list shared links');
                         }
 
-                        const linkData = await linkResponse.json();
-                        let directLink = linkData.url;
+                        // Convert to direct download link
                         directLink = directLink.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
                         directLink = directLink.replace('?dl=0', '');
 
