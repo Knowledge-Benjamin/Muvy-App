@@ -8,6 +8,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const isRemoteUpdate = useRef(false);
     const pendingSync = useRef(null);
+    const lastRemoteTime = useRef(0);
 
     const [notification, setNotification] = useState('');
     const [mismatchWarning, setMismatchWarning] = useState(false);
@@ -37,6 +38,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
 
             // Prevent emitting events back to server
             isRemoteUpdate.current = true;
+            lastRemoteTime.current = state.videoTime || 0;
 
             if (state.videoTime) {
                 videoRef.current.currentTime = state.videoTime;
@@ -52,7 +54,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
             // Reset flag after a delay to ensure events are suppressed
             setTimeout(() => {
                 isRemoteUpdate.current = false;
-            }, 1000);
+            }, 2000);
         }
     };
 
@@ -66,6 +68,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
             if (videoRef.current) {
                 // Video element exists, apply immediately
                 isRemoteUpdate.current = true;
+                lastRemoteTime.current = state.videoTime || 0;
 
                 if (state.videoTime) {
                     videoRef.current.currentTime = state.videoTime;
@@ -81,7 +84,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
 
                 setTimeout(() => {
                     isRemoteUpdate.current = false;
-                }, 1000);
+                }, 2000);
             } else {
                 // Video element not ready (e.g. just joined), store for later
                 console.log('Video not ready, storing pending sync');
@@ -92,6 +95,8 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
         socket.on('receive_play', (data) => {
             if (videoRef.current) {
                 isRemoteUpdate.current = true;
+                lastRemoteTime.current = data.time;
+
                 videoRef.current.currentTime = data.time;
                 videoRef.current.play();
                 setIsPlaying(true);
@@ -104,13 +109,15 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
 
                 setTimeout(() => {
                     isRemoteUpdate.current = false;
-                }, 500);
+                }, 2000);
             }
         });
 
         socket.on('receive_pause', (data) => {
             if (videoRef.current) {
                 isRemoteUpdate.current = true;
+                lastRemoteTime.current = data.time;
+
                 videoRef.current.currentTime = data.time;
                 videoRef.current.pause();
                 setIsPlaying(false);
@@ -123,13 +130,15 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
 
                 setTimeout(() => {
                     isRemoteUpdate.current = false;
-                }, 500);
+                }, 2000);
             }
         });
 
         socket.on('receive_seek', (data) => {
             if (videoRef.current) {
                 isRemoteUpdate.current = true;
+                lastRemoteTime.current = data.time;
+
                 videoRef.current.currentTime = data.time;
                 checkMismatch(data.duration);
 
@@ -142,7 +151,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
 
                 setTimeout(() => {
                     isRemoteUpdate.current = false;
-                }, 500);
+                }, 2000);
             }
         });
 
@@ -153,16 +162,6 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
             socket.off('receive_seek');
         };
     }, [socket]);
-
-    const handlePlayPause = () => {
-        if (videoRef.current) {
-            if (isPlaying) {
-                videoRef.current.pause();
-            } else {
-                videoRef.current.play();
-            }
-        }
-    };
 
     const handlePlay = (e) => {
         // Ignore script-triggered events (like from socket sync)
@@ -198,6 +197,12 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
         // Ignore script-triggered events
         if (e && e.nativeEvent && !e.nativeEvent.isTrusted) return;
         if (isRemoteUpdate.current) return;
+
+        // Anti-Loop: If seek time is very close to last remote update, ignore it
+        if (videoRef.current && Math.abs(videoRef.current.currentTime - lastRemoteTime.current) < 1.5) {
+            console.log('Ignoring seek loop echo');
+            return;
+        }
 
         if (socket) {
             socket.emit('seek_video', {
