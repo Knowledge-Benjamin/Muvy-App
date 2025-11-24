@@ -14,25 +14,54 @@ const GoogleDriveUpload = ({ onLinkGenerated }) => {
     const [pickerApiLoaded, setPickerApiLoaded] = useState(false);
 
     useEffect(() => {
-        // Load Google Identity Services
-        const gisScript = document.createElement('script');
-        gisScript.src = 'https://accounts.google.com/gsi/client';
-        gisScript.onload = initializeGIS;
-        document.body.appendChild(gisScript);
+        let gisScript;
+        let gapiScript;
+        let timeoutId;
 
-        // Load Google API (for Picker)
-        const gapiScript = document.createElement('script');
-        gapiScript.src = 'https://apis.google.com/js/api.js';
-        gapiScript.onload = () => {
-            window.gapi.load('picker', () => {
-                setPickerApiLoaded(true);
-            });
+        const loadScripts = () => {
+            // Timeout to prevent infinite loading
+            timeoutId = setTimeout(() => {
+                if (!window.google || !window.google.accounts) {
+                    console.error('Google Scripts timed out');
+                    setTokenClient(null); // Ensure we don't block UI
+                    alert('Google Drive scripts failed to load. Please check your internet connection.');
+                }
+            }, 10000); // 10 seconds timeout
+
+            // Load Google Identity Services
+            gisScript = document.createElement('script');
+            gisScript.src = 'https://accounts.google.com/gsi/client';
+            gisScript.async = true;
+            gisScript.defer = true;
+            gisScript.onload = initializeGIS;
+            gisScript.onerror = () => {
+                console.error('Failed to load GIS script');
+                alert('Failed to load Google Identity Services.');
+            };
+            document.body.appendChild(gisScript);
+
+            // Load Google API (for Picker)
+            gapiScript = document.createElement('script');
+            gapiScript.src = 'https://apis.google.com/js/api.js';
+            gapiScript.async = true;
+            gapiScript.defer = true;
+            gapiScript.onload = () => {
+                window.gapi.load('picker', () => {
+                    setPickerApiLoaded(true);
+                });
+            };
+            gapiScript.onerror = () => {
+                console.error('Failed to load GAPI script');
+            };
+            document.body.appendChild(gapiScript);
         };
-        document.body.appendChild(gapiScript);
+
+        loadScripts();
 
         return () => {
-            if (document.body.contains(gisScript)) document.body.removeChild(gisScript);
-            if (document.body.contains(gapiScript)) document.body.removeChild(gapiScript);
+            clearTimeout(timeoutId);
+            if (gisScript && document.body.contains(gisScript)) document.body.removeChild(gisScript);
+            if (gapiScript && document.body.contains(gapiScript)) document.body.removeChild(gapiScript);
         };
     }, []);
 
@@ -196,7 +225,24 @@ const GoogleDriveUpload = ({ onLinkGenerated }) => {
     };
 
     if (!tokenClient) {
-        return <div style={{ padding: '0.625rem', color: 'var(--gray-400)', fontSize: '0.75rem' }}>Loading Google Drive...</div>;
+        return (
+            <div style={{ padding: '0.625rem', color: 'var(--gray-400)', fontSize: '0.75rem' }}>
+                <p>Loading Google Drive...</p>
+                <button
+                    onClick={() => window.location.reload()}
+                    style={{
+                        marginTop: '5px',
+                        padding: '5px 10px',
+                        background: 'var(--gray-200)',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                    }}
+                >
+                    Retry
+                </button>
+            </div>
+        );
     }
 
     return (

@@ -12,7 +12,12 @@ const SocketProvider = ({ children }) => {
     useEffect(() => {
         // Connect to server - uses env var in production, localhost in dev
         const SOCKET_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
-        socket.current = io(SOCKET_URL);
+        socket.current = io(SOCKET_URL, {
+            transports: ['websocket', 'polling'], // Try websocket first
+            withCredentials: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+        });
 
         socket.current.on('connect', () => {
             setMe(socket.current.id);
