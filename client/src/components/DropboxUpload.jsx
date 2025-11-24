@@ -50,6 +50,8 @@ const DropboxUpload = ({ onLinkGenerated }) => {
         const isAndroid = window.location.protocol === 'https:' && window.location.hostname === 'localhost';
         const redirectUri = isAndroid ? 'https://localhost' : window.location.origin;
 
+        console.log('Dropbox Redirect URI:', redirectUri); // Debug log
+
         const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${DROPBOX_APP_KEY}&response_type=token&redirect_uri=${redirectUri}`;
 
         // Use redirect instead of popup for better mobile support
