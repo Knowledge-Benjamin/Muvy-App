@@ -181,7 +181,7 @@ body {
 .top-panel-center {
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
+    gap: 1.5rem;
     font-size: 0.75rem;
 }
 
@@ -422,11 +422,13 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--white);
 }
+
 /* ========================================
    MOBILE RESPONSIVE LAYOUT
    ======================================== */
 
 @media (max-width: 768px) {
+
     /* Top panel adjustments */
     .top-panel {
         height: 3rem;
@@ -439,7 +441,7 @@ body {
 
     .top-panel-center {
         font-size: 0.7rem;
-        gap: 0.25rem;
+        gap: 0.5rem;
     }
 
     .top-panel-center span {
