@@ -19,10 +19,21 @@ const DropboxUpload = ({ onLinkGenerated }) => {
         script.setAttribute('data-app-key', DROPBOX_APP_KEY);
         document.body.appendChild(script);
 
-        const savedToken = localStorage.getItem('dropbox_access_token');
-        if (savedToken) {
-            setAccessToken(savedToken);
+        // Check for token in URL (from redirect)
+        const hash = window.location.hash;
+        if (hash.includes('access_token=')) {
+            const token = hash.split('access_token=')[1].split('&')[0];
+            setAccessToken(token);
             setIsAuthenticated(true);
+            localStorage.setItem('dropbox_access_token', token);
+            // Clear hash to clean up URL
+            window.history.replaceState(null, null, ' ');
+        } else {
+            const savedToken = localStorage.getItem('dropbox_access_token');
+            if (savedToken) {
+                setAccessToken(savedToken);
+                setIsAuthenticated(true);
+            }
         }
 
         return () => {
@@ -33,36 +44,11 @@ const DropboxUpload = ({ onLinkGenerated }) => {
     }, []);
 
     const handleAuth = () => {
-        const redirectUri = window.location.origin;
+        const redirectUri = window.location.origin + '/'; // Ensure trailing slash
         const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${DROPBOX_APP_KEY}&response_type=token&redirect_uri=${redirectUri}`;
 
-        const width = 600;
-        const height = 700;
-        const left = (window.screen.width / 2) - (width / 2);
-        const top = (window.screen.height / 2) - (height / 2);
-
-        const popup = window.open(authUrl, 'Dropbox Auth', `width=${width},height=${height},left=${left},top=${top}`);
-
-        const checkPopup = setInterval(() => {
-            try {
-                if (popup.closed) {
-                    clearInterval(checkPopup);
-                    return;
-                }
-
-                const popupUrl = popup.location.href;
-                if (popupUrl.includes('access_token=')) {
-                    const token = popupUrl.split('access_token=')[1].split('&')[0];
-                    setAccessToken(token);
-                    setIsAuthenticated(true);
-                    localStorage.setItem('dropbox_access_token', token);
-                    popup.close();
-                    clearInterval(checkPopup);
-                }
-            } catch (e) {
-                // Cross-origin error, ignore
-            }
-        }, 500);
+        // Use redirect instead of popup for better mobile support
+        window.location.href = authUrl;
     };
 
     const handleSignOut = () => {

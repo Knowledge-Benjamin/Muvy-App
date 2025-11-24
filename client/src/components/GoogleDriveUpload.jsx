@@ -14,54 +14,27 @@ const GoogleDriveUpload = ({ onLinkGenerated }) => {
     const [pickerApiLoaded, setPickerApiLoaded] = useState(false);
 
     useEffect(() => {
-        let gisScript;
-        let gapiScript;
         let timeoutId;
 
-        const loadScripts = () => {
-            // Timeout to prevent infinite loading
-            timeoutId = setTimeout(() => {
-                if (!window.google || !window.google.accounts) {
-                    console.error('Google Scripts timed out');
-                    setTokenClient(null); // Ensure we don't block UI
-                    alert('Google Drive scripts failed to load. Please check your internet connection.');
-                }
-            }, 10000); // 10 seconds timeout
+        const initializeGoogle = () => {
+            if (window.google && window.google.accounts) {
+                initializeGIS();
+            } else {
+                // Retry initialization if scripts haven't loaded yet
+                timeoutId = setTimeout(initializeGoogle, 500);
+            }
 
-            // Load Google Identity Services
-            gisScript = document.createElement('script');
-            gisScript.src = 'https://accounts.google.com/gsi/client';
-            gisScript.async = true;
-            gisScript.defer = true;
-            gisScript.onload = initializeGIS;
-            gisScript.onerror = () => {
-                console.error('Failed to load GIS script');
-                alert('Failed to load Google Identity Services.');
-            };
-            document.body.appendChild(gisScript);
-
-            // Load Google API (for Picker)
-            gapiScript = document.createElement('script');
-            gapiScript.src = 'https://apis.google.com/js/api.js';
-            gapiScript.async = true;
-            gapiScript.defer = true;
-            gapiScript.onload = () => {
+            if (window.gapi) {
                 window.gapi.load('picker', () => {
                     setPickerApiLoaded(true);
                 });
-            };
-            gapiScript.onerror = () => {
-                console.error('Failed to load GAPI script');
-            };
-            document.body.appendChild(gapiScript);
+            }
         };
 
-        loadScripts();
+        initializeGoogle();
 
         return () => {
             clearTimeout(timeoutId);
-            if (gisScript && document.body.contains(gisScript)) document.body.removeChild(gisScript);
-            if (gapiScript && document.body.contains(gapiScript)) document.body.removeChild(gapiScript);
         };
     }, []);
 
