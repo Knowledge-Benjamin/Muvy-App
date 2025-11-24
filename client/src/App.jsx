@@ -42,15 +42,20 @@ function App() {
     React.useEffect(() => {
         const hash = window.location.hash;
         const savedRoomId = sessionStorage.getItem('muvy_room_id');
+        const isAuthRedirect = hash.includes('access_token') || hash.includes('error=');
 
-        // Only auto-join if we have a token (Dropbox redirect) AND a saved room ID
-        if (hash.includes('access_token') && savedRoomId && socket) {
-            console.log('Returning from Dropbox Auth, auto-joining room:', savedRoomId);
-            setRoomId(savedRoomId);
-            setJoined(true);
-            socket.emit('join_room', savedRoomId);
+        // If we are in an auth redirect flow, we MUST NOT clear the session ID
+        // just because the socket isn't ready yet.
+        if (isAuthRedirect) {
+            if (savedRoomId && socket) {
+                console.log('Returning from Dropbox Auth, auto-joining room:', savedRoomId);
+                setRoomId(savedRoomId);
+                setJoined(true);
+                socket.emit('join_room', savedRoomId);
+            }
+            // If socket is missing, do nothing. Wait for it.
         } else {
-            // If not returning from auth, clear session to ensure strict isolation
+            // Only clear if we are definitely NOT returning from auth
             // This ensures a normal refresh logs you out of the room
             sessionStorage.removeItem('muvy_room_id');
         }
