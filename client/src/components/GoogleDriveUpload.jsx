@@ -42,6 +42,7 @@ const GoogleDriveUpload = ({ onLinkGenerated }) => {
         const client = window.google.accounts.oauth2.initTokenClient({
             client_id: GOOGLE_CLIENT_ID,
             scope: SCOPES,
+            use_fedcm_for_prompt: false,
             callback: (response) => {
                 if (response.access_token) {
                     setAccessToken(response.access_token);

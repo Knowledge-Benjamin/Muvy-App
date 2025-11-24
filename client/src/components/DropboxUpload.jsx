@@ -44,7 +44,12 @@ const DropboxUpload = ({ onLinkGenerated }) => {
     }, []);
 
     const handleAuth = () => {
-        const redirectUri = window.location.origin; // No forced trailing slash
+        // Hardcode redirect URI to ensure exact match with Console
+        // For Android (Capacitor), this will be https://localhost
+        // For Web, it will be the current origin
+        const isAndroid = window.location.protocol === 'https:' && window.location.hostname === 'localhost';
+        const redirectUri = isAndroid ? 'https://localhost' : window.location.origin;
+
         const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${DROPBOX_APP_KEY}&response_type=token&redirect_uri=${redirectUri}`;
 
         // Use redirect instead of popup for better mobile support
