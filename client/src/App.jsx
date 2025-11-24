@@ -77,6 +77,14 @@ function App() {
         }
     }, [socket]); // Depend on socket to ensure it's ready
 
+    // Check for auto-open upload panel flag (from Dropbox redirect)
+    React.useEffect(() => {
+        if (sessionStorage.getItem('muvy_auto_open_upload')) {
+            setShowUploadPanel(true);
+            sessionStorage.removeItem('muvy_auto_open_upload');
+        }
+    }, []);
+
     const isHost = socket && socket.id === hostId;
 
     const handleLinkGenerated = (link) => {
@@ -148,35 +156,33 @@ function App() {
                         </button>
                     </div>
 
-                    {/* Upload Panel (Collapsible) */}
-                    {showUploadPanel && (
-                        <div className="upload-panel">
-                            <div className="upload-options">
-                                <div className="upload-section">
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Monitor size={16} /> Local File (Your Device Only)
-                                    </label>
-                                    <input
-                                        type="file"
-                                        accept="video/*"
-                                        onChange={(e) => {
-                                            const file = e.target.files[0];
-                                            if (file) {
-                                                const localUrl = URL.createObjectURL(file);
-                                                setVideoSrc(localUrl);
-                                                alert('⚠️ Local files only work on YOUR device.\n\nTo watch together with others, please upload to Dropbox or Google Drive instead.');
-                                            }
-                                        }}
-                                    />
-                                    <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.7rem', color: 'var(--gray-400)' }}>
-                                        Note: Local files won't sync to other users. Use Dropbox/Google Drive for sharing.
-                                    </p>
-                                </div>
-                                <GoogleDriveUpload onLinkGenerated={handleLinkGenerated} />
-                                <DropboxUpload onLinkGenerated={handleLinkGenerated} />
+                    {/* Upload Panel (Collapsible - Persisted) */}
+                    <div className="upload-panel" style={{ display: showUploadPanel ? 'block' : 'none' }}>
+                        <div className="upload-options">
+                            <div className="upload-section">
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Monitor size={16} /> Local File (Your Device Only)
+                                </label>
+                                <input
+                                    type="file"
+                                    accept="video/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                            const localUrl = URL.createObjectURL(file);
+                                            setVideoSrc(localUrl);
+                                            alert('⚠️ Local files only work on YOUR device.\n\nTo watch together with others, please upload to Dropbox or Google Drive instead.');
+                                        }
+                                    }}
+                                />
+                                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.7rem', color: 'var(--gray-400)' }}>
+                                    Note: Local files won't sync to other users. Use Dropbox/Google Drive for sharing.
+                                </p>
                             </div>
+                            <GoogleDriveUpload onLinkGenerated={handleLinkGenerated} />
+                            <DropboxUpload onLinkGenerated={handleLinkGenerated} />
                         </div>
-                    )}
+                    </div>
 
                     {/* Main Content */}
                     <div className="main-content">

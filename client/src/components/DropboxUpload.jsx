@@ -49,6 +49,9 @@ const DropboxUpload = ({ onLinkGenerated }) => {
 
         const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${DROPBOX_APP_KEY}&response_type=token&redirect_uri=${redirectUri}`;
 
+        // Set flag to re-open upload panel after redirect
+        sessionStorage.setItem('muvy_auto_open_upload', 'true');
+
         // Use redirect instead of popup for better mobile support
         window.location.href = authUrl;
     };
