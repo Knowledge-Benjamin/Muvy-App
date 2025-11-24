@@ -33,8 +33,24 @@ function App() {
             setUserCount(data.userCount);
         });
 
+        // Listen for initial state sync (Late Joiner Fix)
+        socket.on('sync_state', (state) => {
+            console.log('Received sync state:', state);
+            if (state.videoSrc) {
+                setVideoSrc(state.videoSrc);
+            }
+        });
+
+        // Listen for video URL changes from other users
+        socket.on('receive_url_change', (data) => {
+            console.log('Received new video URL:', data.url);
+            setVideoSrc(data.url);
+        });
+
         return () => {
             socket.off('room_metadata');
+            socket.off('sync_state');
+            socket.off('receive_url_change');
         };
     }, [socket]);
 

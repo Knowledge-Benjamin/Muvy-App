@@ -24,9 +24,29 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
     useEffect(() => {
         if (!socket) return;
 
-        socket.on('receive_url_change', (data) => {
-            setVideoSrc(data.url);
-            setMismatchWarning(false);
+        // Initial state sync for playback (Late Joiner Fix)
+        socket.on('sync_state', (state) => {
+            if (videoRef.current) {
+                isRemoteUpdate.current = true;
+
+                // Sync time
+                if (state.videoTime) {
+                    videoRef.current.currentTime = state.videoTime;
+                }
+
+                // Sync play state
+                if (state.isPlaying) {
+                    videoRef.current.play().catch(e => console.log('Autoplay blocked:', e));
+                    setIsPlaying(true);
+                } else {
+                    videoRef.current.pause();
+                    setIsPlaying(false);
+                }
+
+                setTimeout(() => {
+                    isRemoteUpdate.current = false;
+                }, 1000);
+            }
         });
 
         socket.on('receive_play', (data) => {
@@ -87,7 +107,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
         });
 
         return () => {
-            socket.off('receive_url_change');
+            socket.off('sync_state');
             socket.off('receive_play');
             socket.off('receive_pause');
             socket.off('receive_seek');
