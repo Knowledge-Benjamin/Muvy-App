@@ -25,16 +25,11 @@ const DropboxUpload = ({ onLinkGenerated }) => {
             const token = hash.split('access_token=')[1].split('&')[0];
             setAccessToken(token);
             setIsAuthenticated(true);
-            localStorage.setItem('dropbox_access_token', token);
-            // Clear hash to clean up URL
+            // Clear hash to clean up URL, but keep token in state
             window.history.replaceState(null, null, ' ');
-        } else {
-            const savedToken = localStorage.getItem('dropbox_access_token');
-            if (savedToken) {
-                setAccessToken(savedToken);
-                setIsAuthenticated(true);
-            }
         }
+        // NOTE: We do NOT check localStorage here. 
+        // This ensures that if the user refreshes without the hash, they are logged out.
 
         return () => {
             if (document.body.contains(script)) {
@@ -61,7 +56,7 @@ const DropboxUpload = ({ onLinkGenerated }) => {
     const handleSignOut = () => {
         setAccessToken(null);
         setIsAuthenticated(false);
-        localStorage.removeItem('dropbox_access_token');
+        // No localStorage cleanup needed since we don't save it there anymore
     };
 
     const openChooser = () => {

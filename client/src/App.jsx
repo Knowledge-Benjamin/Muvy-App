@@ -20,6 +20,8 @@ function App() {
         if (roomId.trim() && socket) {
             socket.emit('join_room', roomId);
             setJoined(true);
+            // Save room ID to session storage for Dropbox redirect flow
+            sessionStorage.setItem('muvy_room_id', roomId);
         }
     };
 
@@ -35,6 +37,24 @@ function App() {
             socket.off('room_metadata');
         };
     }, [socket]);
+
+    // Auto-join if returning from Dropbox auth
+    React.useEffect(() => {
+        const hash = window.location.hash;
+        const savedRoomId = sessionStorage.getItem('muvy_room_id');
+
+        // Only auto-join if we have a token (Dropbox redirect) AND a saved room ID
+        if (hash.includes('access_token') && savedRoomId && socket) {
+            console.log('Returning from Dropbox Auth, auto-joining room:', savedRoomId);
+            setRoomId(savedRoomId);
+            setJoined(true);
+            socket.emit('join_room', savedRoomId);
+        } else {
+            // If not returning from auth, clear session to ensure strict isolation
+            // This ensures a normal refresh logs you out of the room
+            sessionStorage.removeItem('muvy_room_id');
+        }
+    }, [socket]); // Depend on socket to ensure it's ready
 
     const isHost = socket && socket.id === hostId;
 
