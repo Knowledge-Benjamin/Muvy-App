@@ -35,6 +35,9 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
             const state = pendingSync.current;
             console.log('Applying pending sync state:', state);
 
+            // Prevent emitting events back to server
+            isRemoteUpdate.current = true;
+
             if (state.videoTime) {
                 videoRef.current.currentTime = state.videoTime;
             }
@@ -45,6 +48,11 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
             }
 
             pendingSync.current = null;
+
+            // Reset flag after a delay to ensure events are suppressed
+            setTimeout(() => {
+                isRemoteUpdate.current = false;
+            }, 1000);
         }
     };
 
@@ -156,8 +164,11 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
         }
     };
 
-    const handlePlay = () => {
+    const handlePlay = (e) => {
+        // Ignore script-triggered events (like from socket sync)
+        if (e && e.nativeEvent && !e.nativeEvent.isTrusted) return;
         if (isRemoteUpdate.current) return;
+
         setIsPlaying(true);
         if (socket) {
             socket.emit('play_video', {
@@ -168,8 +179,11 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
         }
     };
 
-    const handlePause = () => {
+    const handlePause = (e) => {
+        // Ignore script-triggered events
+        if (e && e.nativeEvent && !e.nativeEvent.isTrusted) return;
         if (isRemoteUpdate.current) return;
+
         setIsPlaying(false);
         if (socket) {
             socket.emit('pause_video', {
@@ -180,8 +194,11 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
         }
     };
 
-    const handleSeeked = () => {
+    const handleSeeked = (e) => {
+        // Ignore script-triggered events
+        if (e && e.nativeEvent && !e.nativeEvent.isTrusted) return;
         if (isRemoteUpdate.current) return;
+
         if (socket) {
             socket.emit('seek_video', {
                 room: roomId,
