@@ -96,6 +96,24 @@ function App() {
         }
     };
 
+    const generateRoomId = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < 5; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    };
+
+    const handleCreateRoom = () => {
+        if (!socket) return;
+        const newRoomId = generateRoomId();
+        setRoomId(newRoomId);
+        socket.emit('join_room', newRoomId);
+        setJoined(true);
+        sessionStorage.setItem('muvy_room_id', newRoomId);
+    };
+
     return (
         <div className="App">
             {/* DEBUG OVERLAY - REMOVE BEFORE FINAL PRODUCTION */}
@@ -120,13 +138,38 @@ function App() {
 
             {!joined ? (
                 <div className="join-screen">
-                    <input
-                        type="text"
-                        placeholder="Enter Room ID"
-                        value={roomId}
-                        onChange={(e) => setRoomId(e.target.value)}
-                    />
-                    <button onClick={handleJoin}>Join Room</button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+                        <button
+                            onClick={handleCreateRoom}
+                            style={{
+                                background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
+                                padding: '1rem 2rem',
+                                fontSize: '1.2rem',
+                                fontWeight: 'bold',
+                                width: '100%',
+                                maxWidth: '300px'
+                            }}
+                        >
+                            ✨ Create New Room
+                        </button>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', maxWidth: '300px' }}>
+                            <div style={{ flex: 1, height: '1px', background: 'var(--gray-300)' }}></div>
+                            <span style={{ color: 'var(--gray-400)', fontSize: '0.9rem' }}>OR</span>
+                            <div style={{ flex: 1, height: '1px', background: 'var(--gray-300)' }}></div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.5rem', width: '100%', maxWidth: '300px' }}>
+                            <input
+                                type="text"
+                                placeholder="Enter Room ID"
+                                value={roomId}
+                                onChange={(e) => setRoomId(e.target.value)}
+                                style={{ flex: 1 }}
+                            />
+                            <button onClick={handleJoin} style={{ whiteSpace: 'nowrap' }}>Join</button>
+                        </div>
+                    </div>
                 </div>
             ) : (
                 <div className="room-screen">
