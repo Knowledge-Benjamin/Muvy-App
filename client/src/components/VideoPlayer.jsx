@@ -7,6 +7,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
     const videoRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const isRemoteUpdate = useRef(false);
+    const pendingSync = useRef(null);
 
     const [notification, setNotification] = useState('');
     const [mismatchWarning, setMismatchWarning] = useState(false);
@@ -21,20 +22,47 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
         }
     };
 
+    // Force reload video when source changes
+    useEffect(() => {
+        if (videoRef.current) {
+            videoRef.current.load();
+        }
+    }, [videoSrc]);
+
+    // Apply pending sync when video metadata loads
+    const handleLoadedMetadata = () => {
+        if (pendingSync.current && videoRef.current) {
+            const state = pendingSync.current;
+            console.log('Applying pending sync state:', state);
+
+            if (state.videoTime) {
+                videoRef.current.currentTime = state.videoTime;
+            }
+
+            if (state.isPlaying) {
+                videoRef.current.play().catch(e => console.log('Autoplay blocked:', e));
+                setIsPlaying(true);
+            }
+
+            pendingSync.current = null;
+        }
+    };
+
     useEffect(() => {
         if (!socket) return;
 
         // Initial state sync for playback (Late Joiner Fix)
         socket.on('sync_state', (state) => {
+            console.log('Received sync state in player:', state);
+
             if (videoRef.current) {
+                // Video element exists, apply immediately
                 isRemoteUpdate.current = true;
 
-                // Sync time
                 if (state.videoTime) {
                     videoRef.current.currentTime = state.videoTime;
                 }
 
-                // Sync play state
                 if (state.isPlaying) {
                     videoRef.current.play().catch(e => console.log('Autoplay blocked:', e));
                     setIsPlaying(true);
@@ -46,6 +74,10 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
                 setTimeout(() => {
                     isRemoteUpdate.current = false;
                 }, 1000);
+            } else {
+                // Video element not ready (e.g. just joined), store for later
+                console.log('Video not ready, storing pending sync');
+                pendingSync.current = state;
             }
         });
 
@@ -163,7 +195,6 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
         const url = e.target.value;
         setVideoSrc(url);
         setMismatchWarning(false);
-        setLocalFingerprint(null);
         if (socket) {
             socket.emit('video_url_change', { room: roomId, url });
         }
@@ -210,6 +241,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
                             onPlay={handlePlay}
                             onPause={handlePause}
                             onSeeked={handleSeeked}
+                            onLoadedMetadata={handleLoadedMetadata}
                         >
                             <source src={videoSrc} type="video/mp4" />
                             Your browser does not support the video tag.
