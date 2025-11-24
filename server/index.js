@@ -11,8 +11,8 @@ const server = http.createServer(app);
 
 // CORS configuration - allows both production and development origins
 const allowedOrigins = process.env.CLIENT_URL
-    ? [process.env.CLIENT_URL, 'http://localhost:5173', 'http://localhost:5174']
-    : ['http://localhost:5173', 'http://localhost:5174'];
+    ? [process.env.CLIENT_URL, 'http://localhost:5173', 'http://localhost:5174', 'http://localhost', 'https://localhost']
+    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost', 'https://localhost'];
 
 const io = new Server(server, {
     cors: {

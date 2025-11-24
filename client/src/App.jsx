@@ -49,7 +49,26 @@ function App() {
 
     return (
         <div className="App">
-            <h1>Muvy - Watch Together</h1>
+            {/* DEBUG OVERLAY - REMOVE BEFORE FINAL PRODUCTION */}
+            <div style={{
+                position: 'fixed',
+                bottom: '10px',
+                left: '10px',
+                background: 'rgba(0,0,0,0.8)',
+                color: '#0f0',
+                padding: '10px',
+                zIndex: 9999,
+                fontSize: '10px',
+                pointerEvents: 'none',
+                maxWidth: '300px',
+                wordWrap: 'break-word'
+            }}>
+                <p><strong>Origin:</strong> {window.location.origin}</p>
+                <p><strong>Server:</strong> {import.meta.env.VITE_SERVER_URL}</p>
+                <p><strong>Socket:</strong> {socket ? (socket.connected ? '✅ Connected' : '❌ Disconnected') : '⚠️ Null'}</p>
+                <p><strong>Socket ID:</strong> {socket?.id || 'None'}</p>
+            </div>
+
             {!joined ? (
                 <div className="join-screen">
                     <input
