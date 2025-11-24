@@ -1,10 +1,10 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { SocketContext } from './context/SocketContext';
 import VideoPlayer from './components/VideoPlayer';
 import AudioChat from './components/AudioChat';
 import GoogleDriveUpload from './components/GoogleDriveUpload';
 import DropboxUpload from './components/DropboxUpload';
-import { Home, Users, Crown, User, Upload, ChevronDown, Monitor } from 'lucide-react';
+import { Home, Users, Crown, User, Upload, ChevronDown, Monitor, Share2 } from 'lucide-react';
 import './App.css';
 
 function App() {
@@ -25,7 +25,7 @@ function App() {
         }
     };
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (!socket) return;
 
         socket.on('room_metadata', (data) => {
@@ -55,7 +55,7 @@ function App() {
     }, [socket]);
 
     // Auto-join if returning from Dropbox auth
-    React.useEffect(() => {
+    useEffect(() => {
         const hash = window.location.hash;
         const savedRoomId = sessionStorage.getItem('muvy_room_id');
         const isAuthRedirect = hash.includes('access_token') || hash.includes('error=');
@@ -77,8 +77,23 @@ function App() {
         }
     }, [socket]); // Depend on socket to ensure it's ready
 
+    // Auto-join from URL param (Share Link)
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const roomParam = params.get('room');
+        if (roomParam && socket) {
+            console.log('Auto-joining from URL param:', roomParam);
+            setRoomId(roomParam);
+            socket.emit('join_room', roomParam);
+            setJoined(true);
+            sessionStorage.setItem('muvy_room_id', roomParam);
+            // Clean URL without reloading
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }, [socket]);
+
     // Check for auto-open upload panel flag (from Dropbox redirect)
-    React.useEffect(() => {
+    useEffect(() => {
         if (sessionStorage.getItem('muvy_auto_open_upload')) {
             setShowUploadPanel(true);
             sessionStorage.removeItem('muvy_auto_open_upload');
@@ -114,6 +129,13 @@ function App() {
         sessionStorage.setItem('muvy_room_id', newRoomId);
     };
 
+    const handleCopyLink = () => {
+        const link = `${window.location.origin}/?room=${roomId}`;
+        navigator.clipboard.writeText(link).then(() => {
+            alert('Link copied to clipboard!');
+        });
+    };
+
     return (
         <div className="App">
             {/* DEBUG OVERLAY - REMOVE BEFORE FINAL PRODUCTION */}
@@ -138,36 +160,40 @@ function App() {
 
             {!joined ? (
                 <div className="join-screen">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center', width: '100%' }}>
                         <button
                             onClick={handleCreateRoom}
                             style={{
-                                background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
+                                background: 'var(--gray-800)',
+                                color: 'var(--white)',
+                                border: '1px solid var(--gray-600)',
                                 padding: '1rem 2rem',
                                 fontSize: '1.2rem',
                                 fontWeight: 'bold',
                                 width: '100%',
-                                maxWidth: '300px'
+                                cursor: 'pointer',
+                                borderRadius: 'var(--radius-md)',
+                                transition: 'all 0.3s ease'
                             }}
                         >
                             ✨ Create New Room
                         </button>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', maxWidth: '300px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
                             <div style={{ flex: 1, height: '1px', background: 'var(--gray-300)' }}></div>
                             <span style={{ color: 'var(--gray-400)', fontSize: '0.9rem' }}>OR</span>
                             <div style={{ flex: 1, height: '1px', background: 'var(--gray-300)' }}></div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '0.5rem', width: '100%', maxWidth: '300px' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
                             <input
                                 type="text"
                                 placeholder="Enter Room ID"
                                 value={roomId}
                                 onChange={(e) => setRoomId(e.target.value)}
-                                style={{ flex: 1 }}
+                                style={{ flex: 1, marginBottom: 0 }}
                             />
-                            <button onClick={handleJoin} style={{ whiteSpace: 'nowrap' }}>Join</button>
+                            <button onClick={handleJoin} style={{ whiteSpace: 'nowrap', width: 'auto' }}>Join</button>
                         </div>
                     </div>
                 </div>
@@ -182,6 +208,21 @@ function App() {
                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                 <Home size={14} /> {roomId}
                             </span>
+                            <button
+                                onClick={handleCopyLink}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'var(--white)',
+                                    cursor: 'pointer',
+                                    padding: '0.25rem',
+                                    display: 'flex',
+                                    alignItems: 'center'
+                                }}
+                                title="Copy Invite Link"
+                            >
+                                <Share2 size={14} />
+                            </button>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                 <Users size={14} /> {userCount}
                             </span>
