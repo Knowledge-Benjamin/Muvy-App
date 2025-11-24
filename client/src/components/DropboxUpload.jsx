@@ -44,7 +44,7 @@ const DropboxUpload = ({ onLinkGenerated }) => {
     }, []);
 
     const handleAuth = () => {
-        const redirectUri = window.location.origin + '/'; // Ensure trailing slash
+        const redirectUri = window.location.origin; // No forced trailing slash
         const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${DROPBOX_APP_KEY}&response_type=token&redirect_uri=${redirectUri}`;
 
         // Use redirect instead of popup for better mobile support
