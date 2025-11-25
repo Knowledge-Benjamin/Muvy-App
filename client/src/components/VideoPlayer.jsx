@@ -214,22 +214,38 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
     };
 
     const convertToDirectLink = (url) => {
-        // Convert Dropbox sharing links to direct download links
-        if (url.includes('dropbox.com/s/') || url.includes('dropbox.com/scl/')) {
-            let directUrl = url
-                .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
-                .replace('?dl=0', '')
-                .replace('?dl=1', '')
-                .replace('&dl=0', '')
-                .replace('&dl=1', '');
+        // Handle Dropbox sharing links
+        if (url.includes('dropbox.com')) {
+            // New format: dropbox.com/scl/fi/... (requires raw=1 parameter)
+            if (url.includes('/scl/fi/') || url.includes('/scl/fo/')) {
+                // Remove dl=0 and add raw=1 for direct access
+                let directUrl = url
+                    .replace('?dl=0', '?raw=1')
+                    .replace('&dl=0', '&raw=1')
+                    .replace('?dl=1', '?raw=1')
+                    .replace('&dl=1', '&raw=1');
 
-            // Handle new Dropbox link format (dropbox.com/scl/fi/...)
-            if (directUrl.includes('dropbox.com/scl/')) {
-                directUrl = directUrl.replace('dropbox.com/scl/', 'dl.dropboxusercontent.com/scl/');
+                // If no query params exist yet, add raw=1
+                if (!directUrl.includes('?')) {
+                    directUrl += '?raw=1';
+                } else if (!directUrl.includes('raw=1')) {
+                    directUrl += '&raw=1';
+                }
+
+                return directUrl;
             }
 
-            return directUrl;
+            // Old format: dropbox.com/s/... (convert to dl.dropboxusercontent.com)
+            if (url.includes('/s/')) {
+                return url
+                    .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+                    .replace('?dl=0', '')
+                    .replace('?dl=1', '')
+                    .replace('&dl=0', '')
+                    .replace('&dl=1', '');
+            }
         }
+
         return url;
     };
 
