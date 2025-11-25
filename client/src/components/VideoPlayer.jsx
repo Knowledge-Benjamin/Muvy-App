@@ -264,6 +264,10 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
                             onPause={handlePause}
                             onSeeked={handleSeeked}
                             onLoadedMetadata={handleLoadedMetadata}
+                            onError={(e) => {
+                                console.error('Video Error:', e);
+                                setNotification('❌ Error loading video. Please check the URL or try a different file.');
+                            }}
                         >
                             <source src={videoSrc} type="video/mp4" />
                             Your browser does not support the video tag.

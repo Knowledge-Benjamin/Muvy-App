@@ -4,7 +4,8 @@ import VideoPlayer from './components/VideoPlayer';
 import AudioChat from './components/AudioChat';
 import GoogleDriveUpload from './components/GoogleDriveUpload';
 import DropboxUpload from './components/DropboxUpload';
-import { Home, Users, Crown, User, Upload, ChevronDown, Monitor, Share2 } from 'lucide-react';
+import OnboardingModal from './components/OnboardingModal';
+import { Home, Users, Crown, User, Upload, ChevronDown, Monitor, Share2, AlertCircle } from 'lucide-react';
 import './App.css';
 
 function App() {
@@ -15,13 +16,34 @@ function App() {
     const [userCount, setUserCount] = useState(0);
     const [showUploadPanel, setShowUploadPanel] = useState(false);
     const [videoSrc, setVideoSrc] = useState('');
+    const [isJoining, setIsJoining] = useState(false);
+    const [connectionError, setConnectionError] = useState(false);
+    const [showOnboarding, setShowOnboarding] = useState(false);
+
+    // Check for first-time user
+    useEffect(() => {
+        const hasVisited = localStorage.getItem('muvy_has_visited');
+        if (!hasVisited) {
+            setShowOnboarding(true);
+        }
+    }, []);
+
+    const handleCloseOnboarding = () => {
+        setShowOnboarding(false);
+        localStorage.setItem('muvy_has_visited', 'true');
+    };
 
     const handleJoin = () => {
         if (roomId.trim() && socket) {
-            socket.emit('join_room', roomId);
-            setJoined(true);
-            // Save room ID to session storage for Dropbox redirect flow
-            sessionStorage.setItem('muvy_room_id', roomId);
+            setIsJoining(true);
+            // Simulate network delay for better UX (so spinner shows)
+            setTimeout(() => {
+                socket.emit('join_room', roomId);
+                setJoined(true);
+                setIsJoining(false);
+                // Save room ID to session storage for Dropbox redirect flow
+                sessionStorage.setItem('muvy_room_id', roomId);
+            }, 800);
         }
     };
 
@@ -47,10 +69,20 @@ function App() {
             setVideoSrc(data.url);
         });
 
+        socket.on('connect_error', () => {
+            setConnectionError(true);
+        });
+
+        socket.on('connect', () => {
+            setConnectionError(false);
+        });
+
         return () => {
             socket.off('room_metadata');
             socket.off('sync_state');
             socket.off('receive_url_change');
+            socket.off('connect_error');
+            socket.off('connect');
         };
     }, [socket]);
 
@@ -122,11 +154,15 @@ function App() {
 
     const handleCreateRoom = () => {
         if (!socket) return;
-        const newRoomId = generateRoomId();
-        setRoomId(newRoomId);
-        socket.emit('join_room', newRoomId);
-        setJoined(true);
-        sessionStorage.setItem('muvy_room_id', newRoomId);
+        setIsJoining(true);
+        setTimeout(() => {
+            const newRoomId = generateRoomId();
+            setRoomId(newRoomId);
+            socket.emit('join_room', newRoomId);
+            setJoined(true);
+            setIsJoining(false);
+            sessionStorage.setItem('muvy_room_id', newRoomId);
+        }, 800);
     };
 
     const handleCopyLink = () => {
@@ -138,6 +174,30 @@ function App() {
 
     return (
         <div className="App">
+            {showOnboarding && <OnboardingModal onClose={handleCloseOnboarding} />}
+
+            {connectionError && (
+                <div style={{
+                    position: 'fixed',
+                    top: '10px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: '#ef4444',
+                    color: 'white',
+                    padding: '0.5rem 1rem',
+                    borderRadius: 'var(--radius-sm)',
+                    zIndex: 2001,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontSize: '0.875rem',
+                    fontWeight: 'bold',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                }}>
+                    <AlertCircle size={16} />
+                    Connection Lost. Reconnecting...
+                </div>
+            )}
             {/* DEBUG OVERLAY - REMOVE BEFORE FINAL PRODUCTION */}
             <div style={{
                 position: 'fixed',
@@ -158,128 +218,114 @@ function App() {
                 <p><strong>Socket ID:</strong> {socket?.id || 'None'}</p>
             </div>
 
-            {!joined ? (
-                <div className="join-screen">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center', width: '100%' }}>
-                        <button
-                            onClick={handleCreateRoom}
-                            style={{
-                                background: 'var(--gray-800)',
-                                color: 'var(--white)',
-                                border: '1px solid var(--gray-600)',
-                                padding: '1rem 2rem',
-                                fontSize: '1.2rem',
-                                fontWeight: 'bold',
-                                width: '100%',
-                                cursor: 'pointer',
-                                borderRadius: 'var(--radius-md)',
-                                transition: 'all 0.3s ease'
-                            }}
-                        >
-                            ✨ Create New Room
-                        </button>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                            <div style={{ flex: 1, height: '1px', background: 'var(--gray-300)' }}></div>
-                            <span style={{ color: 'var(--gray-400)', fontSize: '0.9rem' }}>OR</span>
-                            <div style={{ flex: 1, height: '1px', background: 'var(--gray-300)' }}></div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
-                            <input
-                                type="text"
-                                placeholder="Enter Room ID"
-                                value={roomId}
-                                onChange={(e) => setRoomId(e.target.value)}
-                                style={{ flex: 1, marginBottom: 0 }}
-                            />
-                            <button onClick={handleJoin} style={{ whiteSpace: 'nowrap', width: 'auto' }}>Join</button>
-                        </div>
-                    </div>
-                </div>
-            ) : (
-                <div className="room-screen">
-                    {/* Top Panel */}
-                    <div className="top-panel">
-                        <div className="top-panel-left">
-                            <h1>Muvy</h1>
-                        </div>
-                        <div className="top-panel-center">
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                <Home size={14} /> {roomId}
-                            </span>
-                            <button
-                                onClick={handleCopyLink}
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: 'var(--white)',
-                                    cursor: 'pointer',
-                                    padding: '0.25rem',
-                                    display: 'flex',
-                                    alignItems: 'center'
-                                }}
-                                title="Copy Invite Link"
-                            >
-                                <Share2 size={14} />
-                            </button>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                <Users size={14} /> {userCount}
-                            </span>
-                            <span className="host-badge">
-                                {isHost ? <><Crown size={14} /> Host</> : <><User size={14} /> Viewer</>}
-                            </span>
-                        </div>
-                        <button
-                            className="upload-toggle-btn"
-                            onClick={() => setShowUploadPanel(!showUploadPanel)}
-                        >
-                            <Upload size={16} />
-                            <span>Upload</span>
-                            <ChevronDown size={16} style={{ transform: showUploadPanel ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }} />
-                        </button>
-                    </div>
-
-                    {/* Upload Panel (Collapsible - Persisted) */}
-                    <div className="upload-panel" style={{ display: showUploadPanel ? 'block' : 'none' }}>
-                        <div className="upload-options">
-                            <div className="upload-section">
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <Monitor size={16} /> Local File (Your Device Only)
-                                </label>
-                                <input
-                                    type="file"
-                                    accept="video/*"
-                                    onChange={(e) => {
-                                        const file = e.target.files[0];
-                                        if (file) {
-                                            const localUrl = URL.createObjectURL(file);
-                                            setVideoSrc(localUrl);
-                                            alert('⚠️ Local files only work on YOUR device.\n\nTo watch together with others, please upload to Dropbox or Google Drive instead.');
-                                        }
-                                    }}
-                                />
-                                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.7rem', color: 'var(--gray-400)' }}>
-                                    Note: Local files won't sync to other users. Use Dropbox/Google Drive for sharing.
-                                </p>
-                            </div>
-                            <GoogleDriveUpload onLinkGenerated={handleLinkGenerated} />
-                            <DropboxUpload onLinkGenerated={handleLinkGenerated} />
-                        </div>
-                    </div>
-
-                    {/* Main Content */}
-                    <div className="main-content">
-                        <div className="video-section">
-                            <VideoPlayer roomId={roomId} isHost={isHost} videoSrc={videoSrc} setVideoSrc={setVideoSrc} />
-                        </div>
-                        <div className="audio-sidebar">
-                            <AudioChat roomId={roomId} />
-                        </div>
-                    </div>
-                </div>
-            )}
+            <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                <input
+                    type="text"
+                    placeholder="Enter Room ID"
+                    value={roomId}
+                    onChange={(e) => setRoomId(e.target.value)}
+                    style={{ flex: 1, marginBottom: 0 }}
+                />
+                <button
+                    onClick={handleJoin}
+                    disabled={isJoining}
+                    style={{
+                        whiteSpace: 'nowrap',
+                        width: 'auto',
+                        minWidth: '80px',
+                        cursor: isJoining ? 'not-allowed' : 'pointer',
+                        opacity: isJoining ? 0.7 : 1
+                    }}
+                >
+                    {isJoining ? '...' : 'Join'}
+                </button>
+            </div>
         </div>
+                </div >
+            ) : (
+        <div className="room-screen">
+            {/* Top Panel */}
+            <div className="top-panel">
+                <div className="top-panel-left">
+                    <h1>Muvy</h1>
+                </div>
+                <div className="top-panel-center">
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Home size={14} /> {roomId}
+                    </span>
+                    <button
+                        onClick={handleCopyLink}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--white)',
+                            cursor: 'pointer',
+                            padding: '0.25rem',
+                            display: 'flex',
+                            alignItems: 'center'
+                        }}
+                        title="Copy Invite Link"
+                    >
+                        <Share2 size={14} />
+                    </button>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Users size={14} /> {userCount}
+                    </span>
+                    <span className="host-badge">
+                        {isHost ? <><Crown size={14} /> Host</> : <><User size={14} /> Viewer</>}
+                    </span>
+                </div>
+                <button
+                    className="upload-toggle-btn"
+                    onClick={() => setShowUploadPanel(!showUploadPanel)}
+                >
+                    <Upload size={16} />
+                    <span>Upload</span>
+                    <ChevronDown size={16} style={{ transform: showUploadPanel ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }} />
+                </button>
+            </div>
+
+            {/* Upload Panel (Collapsible - Persisted) */}
+            <div className="upload-panel" style={{ display: showUploadPanel ? 'block' : 'none' }}>
+                <div className="upload-options">
+                    <div className="upload-section">
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Monitor size={16} /> Local File (Your Device Only)
+                        </label>
+                        <input
+                            type="file"
+                            accept="video/*"
+                            onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                    const localUrl = URL.createObjectURL(file);
+                                    setVideoSrc(localUrl);
+                                    alert('⚠️ Local files only work on YOUR device.\n\nTo watch together with others, please upload to Dropbox or Google Drive instead.');
+                                }
+                            }}
+                        />
+                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.7rem', color: 'var(--gray-400)' }}>
+                            Note: Local files won't sync to other users. Use Dropbox/Google Drive for sharing.
+                        </p>
+                    </div>
+                    <GoogleDriveUpload onLinkGenerated={handleLinkGenerated} />
+                    <DropboxUpload onLinkGenerated={handleLinkGenerated} />
+                </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="main-content">
+                <div className="video-section">
+                    <VideoPlayer roomId={roomId} isHost={isHost} videoSrc={videoSrc} setVideoSrc={setVideoSrc} />
+                </div>
+                <div className="audio-sidebar">
+                    <AudioChat roomId={roomId} />
+                </div>
+            </div>
+        </div>
+    )
+}
+        </div >
     );
 }
 
