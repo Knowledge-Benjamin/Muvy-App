@@ -422,8 +422,8 @@ const DropboxUpload = ({ onLinkGenerated }) => {
 
         if (files.length === 0) return;
 
-        // Sort files by name (assumes naming like part001.mp4, part002.mp4...)
-        files.sort((a, b) => a.name.localeCompare(b.name));
+        // Files are now in selection order (first selected = Part 1, last = Part N)
+        // No sorting needed - respect user's selection order
 
         // Initialize upload queue
         const queue = files.map((file, index) => ({
@@ -829,7 +829,7 @@ const DropboxUpload = ({ onLinkGenerated }) => {
                             </label>
                             {isMultiPartMode && (
                                 <p style={{ width: '100%', margin: '0.3rem 0 0 0', fontSize: '0.65rem', color: 'var(--gray-400)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                    <List size={10} /> Select all video parts (e.g., part001.mp4, part002.mp4...)
+                                    <List size={10} /> Select parts in order: 1st file = Part 1, last file = Last part
                                 </p>
                             )}
                         </div>
