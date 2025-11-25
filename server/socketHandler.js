@@ -38,26 +38,37 @@ module.exports = (io) => {
 
         // Sync events
         socket.on('play_video', (data) => {
-            // data: { room, time, timestamp }
+            // data: { room, time, duration, partIndex? }
             if (!rooms[data.room]) rooms[data.room] = {};
             rooms[data.room].isPlaying = true;
             rooms[data.room].videoTime = data.time;
             rooms[data.room].lastTimestamp = data.timestamp;
+            if (data.partIndex !== undefined) {
+                rooms[data.room].currentPartIndex = data.partIndex;
+            }
 
             socket.to(data.room).emit('receive_play', { ...data, userId: socket.id });
         });
 
         socket.on('pause_video', (data) => {
+            // data: { room, time, duration, partIndex? }
             if (!rooms[data.room]) rooms[data.room] = {};
             rooms[data.room].isPlaying = false;
             rooms[data.room].videoTime = data.time;
+            if (data.partIndex !== undefined) {
+                rooms[data.room].currentPartIndex = data.partIndex;
+            }
 
             socket.to(data.room).emit('receive_pause', { ...data, userId: socket.id });
         });
 
         socket.on('seek_video', (data) => {
+            // data: { room, time, duration, partIndex? }
             if (!rooms[data.room]) rooms[data.room] = {};
             rooms[data.room].videoTime = data.time;
+            if (data.partIndex !== undefined) {
+                rooms[data.room].currentPartIndex = data.partIndex;
+            }
 
             socket.to(data.room).emit('receive_seek', { ...data, userId: socket.id });
         });
@@ -68,8 +79,32 @@ module.exports = (io) => {
             rooms[data.room].videoSrc = data.url;
             rooms[data.room].videoTime = 0;
             rooms[data.room].isPlaying = false;
+            rooms[data.room].playlist = null; // Clear playlist when single URL is set
+            rooms[data.room].currentPartIndex = 0;
 
             socket.to(data.room).emit('receive_url_change', data);
+        });
+
+        // Multi-part video events
+        socket.on('set_playlist', (data) => {
+            // data: { room, playlist }
+            if (!rooms[data.room]) rooms[data.room] = {};
+            rooms[data.room].playlist = data.playlist;
+            rooms[data.room].currentPartIndex = 0;
+            rooms[data.room].videoTime = 0;
+            rooms[data.room].isPlaying = false;
+            rooms[data.room].videoSrc = data.playlist[0]?.url || '';
+
+            socket.to(data.room).emit('receive_playlist', { playlist: data.playlist });
+        });
+
+        socket.on('load_next_part', (data) => {
+            // data: { room, partIndex }
+            if (!rooms[data.room]) rooms[data.room] = {};
+            rooms[data.room].currentPartIndex = data.partIndex;
+            rooms[data.room].videoTime = 0;
+
+            socket.to(data.room).emit('receive_next_part', { partIndex: data.partIndex });
         });
 
         socket.on('file_loaded', (data) => {

@@ -161,13 +161,31 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
             }
         });
 
+        // Multi-part video sync events
+        socket.on('receive_playlist', (data) => {
+            console.log('Received playlist from another user:', data.playlist);
+            if (data.playlist && data.playlist.length > 0) {
+                handleSetPlaylist(data.playlist);
+            }
+        });
+
+        socket.on('receive_next_part', (data) => {
+            console.log('Another user advanced to next part:', data.partIndex);
+            if (playlist && data.partIndex < playlist.length) {
+                setCurrentPartIndex(data.partIndex);
+                setVideoSrc(playlist[data.partIndex].url);
+            }
+        });
+
         return () => {
             socket.off('sync_state');
             socket.off('receive_play');
             socket.off('receive_pause');
             socket.off('receive_seek');
+            socket.off('receive_playlist');
+            socket.off('receive_next_part');
         };
-    }, [socket]);
+    }, [socket, playlist]); // Add playlist to dependencies
 
     const handlePlay = (e) => {
         // Ignore script-triggered events (like from socket sync)
@@ -176,11 +194,18 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
 
         setIsPlaying(true);
         if (socket) {
-            socket.emit('play_video', {
+            const emitData = {
                 room: roomId,
                 time: videoRef.current.currentTime,
                 duration: videoRef.current.duration
-            });
+            };
+
+            // Include partIndex for multi-part videos
+            if (isMultiPart()) {
+                emitData.partIndex = currentPartIndex;
+            }
+
+            socket.emit('play_video', emitData);
         }
     };
 
@@ -191,11 +216,18 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
 
         setIsPlaying(false);
         if (socket) {
-            socket.emit('pause_video', {
+            const emitData = {
                 room: roomId,
                 time: videoRef.current.currentTime,
                 duration: videoRef.current.duration
-            });
+            };
+
+            // Include partIndex for multi-part videos
+            if (isMultiPart()) {
+                emitData.partIndex = currentPartIndex;
+            }
+
+            socket.emit('pause_video', emitData);
         }
     };
 
@@ -211,11 +243,18 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
         }
 
         if (socket) {
-            socket.emit('seek_video', {
+            const emitData = {
                 room: roomId,
                 time: videoRef.current.currentTime,
                 duration: videoRef.current.duration
-            });
+            };
+
+            // Include partIndex for multi-part videos
+            if (isMultiPart()) {
+                emitData.partIndex = currentPartIndex;
+            }
+
+            socket.emit('seek_video', emitData);
         }
     };
 
