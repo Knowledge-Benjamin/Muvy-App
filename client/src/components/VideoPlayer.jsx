@@ -213,8 +213,32 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
         }
     };
 
+    const convertToDirectLink = (url) => {
+        // Convert Dropbox sharing links to direct download links
+        if (url.includes('dropbox.com/s/') || url.includes('dropbox.com/scl/')) {
+            let directUrl = url
+                .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+                .replace('?dl=0', '')
+                .replace('?dl=1', '')
+                .replace('&dl=0', '')
+                .replace('&dl=1', '');
+
+            // Handle new Dropbox link format (dropbox.com/scl/fi/...)
+            if (directUrl.includes('dropbox.com/scl/')) {
+                directUrl = directUrl.replace('dropbox.com/scl/', 'dl.dropboxusercontent.com/scl/');
+            }
+
+            return directUrl;
+        }
+        return url;
+    };
+
     const handleUrlChange = (e) => {
-        const url = e.target.value;
+        let url = e.target.value.trim();
+
+        // Auto-convert Dropbox sharing links
+        url = convertToDirectLink(url);
+
         setVideoSrc(url);
         setMismatchWarning(false);
         if (socket) {

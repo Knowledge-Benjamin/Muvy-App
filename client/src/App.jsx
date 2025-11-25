@@ -198,6 +198,7 @@ function App() {
                     Connection Lost. Reconnecting...
                 </div>
             )}
+
             {/* DEBUG OVERLAY - REMOVE BEFORE FINAL PRODUCTION */}
             <div style={{
                 position: 'fixed',
@@ -218,110 +219,149 @@ function App() {
                 <p><strong>Socket ID:</strong> {socket?.id || 'None'}</p>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
-                <input
-                    type="text"
-                    placeholder="Enter Room ID"
-                    value={roomId}
-                    onChange={(e) => setRoomId(e.target.value)}
-                    style={{ flex: 1, marginBottom: 0 }}
-                />
-                <button
-                    onClick={handleJoin}
-                    disabled={isJoining}
-                    style={{
-                        whiteSpace: 'nowrap',
-                        width: 'auto',
-                        minWidth: '80px',
-                        cursor: isJoining ? 'not-allowed' : 'pointer',
-                        opacity: isJoining ? 0.7 : 1
-                    }}
-                >
-                    {isJoining ? '...' : 'Join'}
-                </button>
-            </div>
-        </div>
-                </div >
-            ) : (
-        <div className="room-screen">
-            {/* Top Panel */}
-            <div className="top-panel">
-                <div className="top-panel-left">
-                    <h1>Muvy</h1>
-                </div>
-                <div className="top-panel-center">
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <Home size={14} /> {roomId}
-                    </span>
-                    <button
-                        onClick={handleCopyLink}
-                        style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: 'var(--white)',
-                            cursor: 'pointer',
-                            padding: '0.25rem',
-                            display: 'flex',
-                            alignItems: 'center'
-                        }}
-                        title="Copy Invite Link"
-                    >
-                        <Share2 size={14} />
-                    </button>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <Users size={14} /> {userCount}
-                    </span>
-                    <span className="host-badge">
-                        {isHost ? <><Crown size={14} /> Host</> : <><User size={14} /> Viewer</>}
-                    </span>
-                </div>
-                <button
-                    className="upload-toggle-btn"
-                    onClick={() => setShowUploadPanel(!showUploadPanel)}
-                >
-                    <Upload size={16} />
-                    <span>Upload</span>
-                    <ChevronDown size={16} style={{ transform: showUploadPanel ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }} />
-                </button>
-            </div>
-
-            {/* Upload Panel (Collapsible - Persisted) */}
-            <div className="upload-panel" style={{ display: showUploadPanel ? 'block' : 'none' }}>
-                <div className="upload-options">
-                    <div className="upload-section">
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Monitor size={16} /> Local File (Your Device Only)
-                        </label>
-                        <input
-                            type="file"
-                            accept="video/*"
-                            onChange={(e) => {
-                                const file = e.target.files[0];
-                                if (file) {
-                                    const localUrl = URL.createObjectURL(file);
-                                    setVideoSrc(localUrl);
-                                    alert('⚠️ Local files only work on YOUR device.\n\nTo watch together with others, please upload to Dropbox or Google Drive instead.');
-                                }
+            {!joined ? (
+                <div className="join-screen">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center', width: '100%' }}>
+                        <button
+                            onClick={handleCreateRoom}
+                            disabled={isJoining}
+                            style={{
+                                background: 'var(--gray-800)',
+                                color: 'var(--white)',
+                                border: '1px solid var(--gray-600)',
+                                padding: '1rem 2rem',
+                                fontSize: '1.2rem',
+                                fontWeight: 'bold',
+                                width: '100%',
+                                cursor: isJoining ? 'not-allowed' : 'pointer',
+                                borderRadius: 'var(--radius-md)',
+                                transition: 'all 0.3s ease',
+                                position: 'relative',
+                                opacity: isJoining ? 0.7 : 1
                             }}
-                        />
-                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.7rem', color: 'var(--gray-400)' }}>
-                            Note: Local files won't sync to other users. Use Dropbox/Google Drive for sharing.
-                        </p>
-                    </div>
-                    <GoogleDriveUpload onLinkGenerated={handleLinkGenerated} />
-                    <DropboxUpload onLinkGenerated={handleLinkGenerated} />
-                </div>
-            </div>
+                        >
+                            {isJoining ? (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                                    <div className="spinner" style={{ width: '20px', height: '20px', borderWidth: '2px' }}></div>
+                                    Creating...
+                                </div>
+                            ) : (
+                                '✨ Create New Room'
+                            )}
+                        </button>
 
-            {/* Main Content */}
-            <div className="main-content">
-                <div className="video-section">
-                    <VideoPlayer roomId={roomId} isHost={isHost} videoSrc={videoSrc} setVideoSrc={setVideoSrc} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                            <div style={{ flex: 1, height: '1px', background: 'var(--gray-300)' }}></div>
+                            <span style={{ color: 'var(--gray-400)', fontSize: '0.9rem' }}>OR</span>
+                            <div style={{ flex: 1, height: '1px', background: 'var(--gray-300)' }}></div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                            <input
+                                type="text"
+                                placeholder="Enter Room ID"
+                                value={roomId}
+                                onChange={(e) => setRoomId(e.target.value)}
+                                style={{ flex: 1, marginBottom: 0 }}
+                            />
+                            <button
+                                onClick={handleJoin}
+                                disabled={isJoining}
+                                style={{
+                                    whiteSpace: 'nowrap',
+                                    width: 'auto',
+                                    minWidth: '80px',
+                                    cursor: isJoining ? 'not-allowed' : 'pointer',
+                                    opacity: isJoining ? 0.7 : 1
+                                }}
+                            >
+                                {isJoining ? '...' : 'Join'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div className="audio-sidebar">
-                    <AudioChat roomId={roomId} />
+            ) : (
+                <div className="room-screen">
+                    {/* Top Panel */}
+                    <div className="top-panel">
+                        <div className="top-panel-left">
+                            <h1>Muvy</h1>
+                        </div>
+                        <div className="top-panel-center">
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <Home size={14} /> {roomId}
+                            </span>
+                            <button
+                                onClick={handleCopyLink}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'var(--white)',
+                                    cursor: 'pointer',
+                                    padding: '0.25rem',
+                                    display: 'flex',
+                                    alignItems: 'center'
+                                }}
+                                title="Copy Invite Link"
+                            >
+                                <Share2 size={14} />
+                            </button>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <Users size={14} /> {userCount}
+                            </span>
+                            <span className="host-badge">
+                                {isHost ? <><Crown size={14} /> Host</> : <><User size={14} /> Viewer</>}
+                            </span>
+                        </div>
+                        <button
+                            className="upload-toggle-btn"
+                            onClick={() => setShowUploadPanel(!showUploadPanel)}
+                        >
+                            <Upload size={16} />
+                            <span>Upload</span>
+                            <ChevronDown size={16} style={{ transform: showUploadPanel ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }} />
+                        </button>
+                    </div>
+
+                    {/* Upload Panel (Collapsible - Persisted) */}
+                    <div className="upload-panel" style={{ display: showUploadPanel ? 'block' : 'none' }}>
+                        <div className="upload-options">
+                            <div className="upload-section">
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Monitor size={16} /> Local File (Your Device Only)
+                                </label>
+                                <input
+                                    type="file"
+                                    accept="video/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                            const localUrl = URL.createObjectURL(file);
+                                            setVideoSrc(localUrl);
+                                            alert('⚠️ Local files only work on YOUR device.\n\nTo watch together with others, please upload to Dropbox or Google Drive instead.');
+                                        }
+                                    }}
+                                />
+                                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.7rem', color: 'var(--gray-400)' }}>
+                                    Note: Local files won't sync to other users. Use Dropbox/Google Drive for sharing.
+                                </p>
+                            </div>
+                            <GoogleDriveUpload onLinkGenerated={handleLinkGenerated} />
+                            <DropboxUpload onLinkGenerated={handleLinkGenerated} />
+                        </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <div className="main-content">
+                        <div className="video-section">
+                            <VideoPlayer roomId={roomId} isHost={isHost} videoSrc={videoSrc} setVideoSrc={setVideoSrc} />
+                        </div>
+                        <div className="audio-sidebar">
+                            <AudioChat roomId={roomId} />
+                        </div>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

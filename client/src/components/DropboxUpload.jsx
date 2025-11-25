@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Lock, Folder, Upload, Check, X, RotateCw, Sparkles } from 'lucide-react';
 
 const DROPBOX_APP_KEY = import.meta.env.VITE_DROPBOX_APP_KEY;
+const FILE_SIZE_THRESHOLD = 150 * 1024 * 1024; // 150MB in bytes
+const CHUNK_SIZE = 8 * 1024 * 1024; // 8MB chunks
 
 const DropboxUpload = ({ onLinkGenerated }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -107,6 +109,196 @@ const DropboxUpload = ({ onLinkGenerated }) => {
         }
     };
 
+    const createShareLink = async (pathDisplay) => {
+        try {
+            // First, try to list existing shared links
+            const listResponse = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    path: pathDisplay,
+                    direct_only: true
+                }),
+            });
+
+            let directLink;
+
+            if (listResponse.ok) {
+                const listData = await listResponse.json();
+
+                // If link already exists, use it
+                if (listData.links && listData.links.length > 0) {
+                    directLink = listData.links[0].url;
+                } else {
+                    // No existing link, create a new one
+                    const createResponse = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            path: pathDisplay,
+                            settings: { requested_visibility: 'public' },
+                        }),
+                    });
+
+                    if (!createResponse.ok) {
+                        const errorData = await createResponse.json();
+
+                        // If link already exists (race condition), list again
+                        if (errorData.error && errorData.error['.tag'] === 'shared_link_already_exists') {
+                            const retryList = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${accessToken}`,
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    path: pathDisplay,
+                                    direct_only: true
+                                }),
+                            });
+
+                            if (retryList.ok) {
+                                const retryData = await retryList.json();
+                                if (retryData.links && retryData.links.length > 0) {
+                                    directLink = retryData.links[0].url;
+                                }
+                            }
+                        }
+
+                        if (!directLink) {
+                            throw new Error('Failed to create or retrieve share link');
+                        }
+                    } else {
+                        const createData = await createResponse.json();
+                        directLink = createData.url;
+                    }
+                }
+            } else {
+                throw new Error('Failed to list shared links');
+            }
+
+            // Convert to direct download link
+            directLink = directLink.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
+            directLink = directLink.replace('?dl=0', '');
+
+            return directLink;
+        } catch (error) {
+            console.error('Share link error:', error);
+            throw error;
+        }
+    };
+
+    const uploadLargeFile = async (file) => {
+        try {
+            const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+            let uploadedBytes = 0;
+            let sessionId = null;
+
+            // Start upload session
+            const startChunk = file.slice(0, Math.min(CHUNK_SIZE, file.size));
+            const startResponse = await fetch('https://content.dropboxapi.com/2/files/upload_session/start', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/octet-stream',
+                },
+                body: startChunk,
+            });
+
+            if (!startResponse.ok) {
+                throw new Error('Failed to start upload session');
+            }
+
+            const startData = await startResponse.json();
+            sessionId = startData.session_id;
+            uploadedBytes += startChunk.size;
+            setUploadProgress(Math.round((uploadedBytes / file.size) * 90));
+
+            // Upload remaining chunks
+            for (let chunkIndex = 1; chunkIndex < totalChunks; chunkIndex++) {
+                const start = chunkIndex * CHUNK_SIZE;
+                const end = Math.min(start + CHUNK_SIZE, file.size);
+                const chunk = file.slice(start, end);
+                const isLast = chunkIndex === totalChunks - 1;
+
+                if (isLast) {
+                    // Finish session with last chunk
+                    const finishResponse = await fetch('https://content.dropboxapi.com/2/files/upload_session/finish', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Dropbox-API-Arg': JSON.stringify({
+                                cursor: {
+                                    session_id: sessionId,
+                                    offset: uploadedBytes,
+                                },
+                                commit: {
+                                    path: `/${file.name}`,
+                                    mode: 'add',
+                                    autorename: true,
+                                    mute: false,
+                                },
+                            }),
+                            'Content-Type': 'application/octet-stream',
+                        },
+                        body: chunk,
+                    });
+
+                    if (!finishResponse.ok) {
+                        throw new Error('Failed to finish upload session');
+                    }
+
+                    const finishData = await finishResponse.json();
+                    setUploadProgress(95);
+
+                    // Create share link
+                    const directLink = await createShareLink(finishData.path_display);
+
+                    setUploadProgress(100);
+                    setIsUploading(false);
+                    setCurrentFile(null);
+
+                    if (onLinkGenerated) {
+                        onLinkGenerated(directLink);
+                    }
+                } else {
+                    // Append chunk
+                    const appendResponse = await fetch('https://content.dropboxapi.com/2/files/upload_session/append_v2', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Dropbox-API-Arg': JSON.stringify({
+                                cursor: {
+                                    session_id: sessionId,
+                                    offset: uploadedBytes,
+                                },
+                            }),
+                            'Content-Type': 'application/octet-stream',
+                        },
+                        body: chunk,
+                    });
+
+                    if (!appendResponse.ok) {
+                        throw new Error('Failed to append chunk');
+                    }
+
+                    uploadedBytes += chunk.size;
+                    setUploadProgress(Math.round((uploadedBytes / file.size) * 90));
+                }
+            }
+        } catch (error) {
+            console.error('Large file upload error:', error);
+            setIsUploading(false);
+            setUploadError('Large file upload failed. Please try again.');
+        }
+    };
+
     const uploadToDropbox = async (file) => {
         if (!accessToken) {
             alert('Please sign in to Dropbox first');
@@ -119,6 +311,13 @@ const DropboxUpload = ({ onLinkGenerated }) => {
         setUploadError(null);
 
         try {
+            // Use chunked upload for large files
+            if (file.size > FILE_SIZE_THRESHOLD) {
+                await uploadLargeFile(file);
+                return;
+            }
+
+            // Regular upload for small files
             const xhr = new XMLHttpRequest();
             xhrRef.current = xhr;
 
@@ -135,82 +334,7 @@ const DropboxUpload = ({ onLinkGenerated }) => {
                     const data = JSON.parse(xhr.responseText);
 
                     try {
-                        // First, try to list existing shared links
-                        const listResponse = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': `Bearer ${accessToken}`,
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                path: data.path_display,
-                                direct_only: true
-                            }),
-                        });
-
-                        let directLink;
-
-                        if (listResponse.ok) {
-                            const listData = await listResponse.json();
-
-                            // If link already exists, use it
-                            if (listData.links && listData.links.length > 0) {
-                                directLink = listData.links[0].url;
-                            } else {
-                                // No existing link, create a new one
-                                const createResponse = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Authorization': `Bearer ${accessToken}`,
-                                        'Content-Type': 'application/json',
-                                    },
-                                    body: JSON.stringify({
-                                        path: data.path_display,
-                                        settings: { requested_visibility: 'public' },
-                                    }),
-                                });
-
-                                if (!createResponse.ok) {
-                                    const errorData = await createResponse.json();
-
-                                    // If link already exists (race condition), list again
-                                    if (errorData.error && errorData.error['.tag'] === 'shared_link_already_exists') {
-                                        const retryList = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
-                                            method: 'POST',
-                                            headers: {
-                                                'Authorization': `Bearer ${accessToken}`,
-                                                'Content-Type': 'application/json',
-                                            },
-                                            body: JSON.stringify({
-                                                path: data.path_display,
-                                                direct_only: true
-                                            }),
-                                        });
-
-                                        if (retryList.ok) {
-                                            const retryData = await retryList.json();
-                                            if (retryData.links && retryData.links.length > 0) {
-                                                directLink = retryData.links[0].url;
-                                            }
-                                        }
-                                    }
-
-                                    if (!directLink) {
-                                        throw new Error('Failed to create or retrieve share link');
-                                    }
-                                } else {
-                                    const createData = await createResponse.json();
-                                    directLink = createData.url;
-                                }
-                            }
-                        } else {
-                            throw new Error('Failed to list shared links');
-                        }
-
-                        // Convert to direct download link
-                        directLink = directLink.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
-                        directLink = directLink.replace('?dl=0', '');
-
+                        const directLink = await createShareLink(data.path_display);
                         setUploadProgress(100);
                         setIsUploading(false);
                         setCurrentFile(null);
@@ -219,7 +343,6 @@ const DropboxUpload = ({ onLinkGenerated }) => {
                             onLinkGenerated(directLink);
                         }
                     } catch (error) {
-                        console.error('Share link error:', error);
                         setIsUploading(false);
                         setUploadError('Failed to create share link. Please try again.');
                     }
@@ -489,7 +612,7 @@ const DropboxUpload = ({ onLinkGenerated }) => {
                         </div>
                     )}
                     <p style={{ margin: '0.625rem 0 0 0', fontSize: '0.7rem', color: 'var(--gray-400)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <Sparkles size={12} /> Dropbox links work perfectly with video sync!
+                        <Sparkles size={12} /> Supports files up to 150GB! Perfect video sync.
                     </p>
                 </div>
             )}
