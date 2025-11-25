@@ -104,7 +104,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
                 lastRemoteTime.current = data.time;
 
                 videoRef.current.currentTime = data.time;
-                videoRef.current.play();
+                videoRef.current.play().catch(e => console.log('Autoplay blocked:', e));
                 setIsPlaying(true);
                 checkMismatch(data.duration);
 
@@ -165,7 +165,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
         socket.on('receive_playlist', (data) => {
             console.log('Received playlist from another user:', data.playlist);
             if (data.playlist && data.playlist.length > 0) {
-                handleSetPlaylist(data.playlist);
+                handleSetPlaylist(data.playlist, true); // skipEmit=true to avoid loop
             }
         });
 
@@ -185,7 +185,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
             socket.off('receive_playlist');
             socket.off('receive_next_part');
         };
-    }, [socket, playlist]); // Add playlist to dependencies
+    }, [socket, playlist]);
 
     const handlePlay = (e) => {
         // Ignore script-triggered events (like from socket sync)
@@ -391,7 +391,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
     };
 
     // Handle playlist from multi-part upload (called from App.jsx)
-    const handleSetPlaylist = (playlistData) => {
+    const handleSetPlaylist = (playlistData, skipEmit = false) => {
         if (!playlistData || playlistData.length === 0) return;
 
         setPlaylist(playlistData);
@@ -400,8 +400,8 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
         setPartDurations([]);
         setMismatchWarning(false);
 
-        // Notify other viewers
-        if (socket) {
+        // Notify other viewers (only if not already receiving from socket)
+        if (socket && !skipEmit) {
             socket.emit('set_playlist', { room: roomId, playlist: playlistData });
         }
     };
@@ -418,7 +418,7 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
                 delete window.videoPlayerRef.handleSetPlaylist;
             }
         };
-    }, [playlist, roomId, socket]); // Re-register when dependencies change
+    }, [playlist, roomId, socket]);
 
     return (
         <div className="video-player-container">

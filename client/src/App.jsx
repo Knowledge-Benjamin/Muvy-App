@@ -139,8 +139,13 @@ function App() {
         if (linkOrPlaylist && typeof linkOrPlaylist === 'object' && linkOrPlaylist.type === 'playlist') {
             // Multi-part playlist
             const playlistData = linkOrPlaylist.playlist;
-            // We need to pass this to VideoPlayer via a ref or callback
-            // For now, store in state and pass to VideoPlayer
+
+            // Set first part URL so uploader sees video immediately
+            if (playlistData && playlistData.length > 0) {
+                setVideoSrc(playlistData[0].url);
+            }
+
+            // Pass playlist to VideoPlayer
             if (window.videoPlayerRef && window.videoPlayerRef.handleSetPlaylist) {
                 window.videoPlayerRef.handleSetPlaylist(playlistData);
             }

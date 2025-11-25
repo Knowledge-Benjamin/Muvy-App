@@ -466,6 +466,12 @@ const DropboxUpload = ({ onLinkGenerated }) => {
                     idx === i ? { ...item, status: 'done', url: url, progress: 100 } : item
                 ));
 
+                // ✨ IMMEDIATE PLAYBACK: Emit first part immediately!
+                if (i === 0 && onLinkGenerated) {
+                    // Start playback with first part while rest upload in background
+                    onLinkGenerated({ type: 'playlist', playlist });
+                }
+
             } catch (error) {
                 console.error(`Failed to upload part ${i + 1}:`, error);
 
@@ -482,8 +488,8 @@ const DropboxUpload = ({ onLinkGenerated }) => {
         setIsUploading(false);
         setPlaylistParts(playlist);
 
-        // Emit playlist to parent (App.jsx will handle this)
-        if (playlist.length === files.length && onLinkGenerated) {
+        // Update playlist with all completed parts (for parts that finished after first emit)
+        if (playlist.length > 1 && onLinkGenerated) {
             onLinkGenerated({ type: 'playlist', playlist });
         }
     };
