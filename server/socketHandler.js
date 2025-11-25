@@ -88,6 +88,8 @@ module.exports = (io) => {
         // Multi-part video events
         socket.on('set_playlist', (data) => {
             // data: { room, playlist }
+            console.log(`[SERVER] Received set_playlist for room ${data.room}, playlist length: ${data.playlist?.length}`);
+
             if (!rooms[data.room]) rooms[data.room] = {};
             rooms[data.room].playlist = data.playlist;
             rooms[data.room].currentPartIndex = 0;
@@ -95,7 +97,9 @@ module.exports = (io) => {
             rooms[data.room].isPlaying = false;
             rooms[data.room].videoSrc = data.playlist[0]?.url || '';
 
+            console.log(`[SERVER] Broadcasting receive_playlist to room ${data.room}`);
             socket.to(data.room).emit('receive_playlist', { playlist: data.playlist });
+            console.log(`[SERVER] Broadcast complete`);
         });
 
         socket.on('load_next_part', (data) => {

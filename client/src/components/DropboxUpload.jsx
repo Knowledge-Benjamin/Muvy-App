@@ -466,9 +466,10 @@ const DropboxUpload = ({ onLinkGenerated }) => {
                     idx === i ? { ...item, status: 'done', url: url, progress: 100 } : item
                 ));
 
-                // ✨ IMMEDIATE PLAYBACK: Emit first part immediately!
-                if (i === 0 && onLinkGenerated) {
-                    // Start playback with first part while rest upload in background
+                // ✨ PROGRESSIVE PLAYBACK: Emit updated playlist after EVERY part!
+                // This allows viewing Part 2 while Part 3 is still uploading
+                if (onLinkGenerated) {
+                    console.log(`[Upload] Part ${i + 1} complete. Emitting playlist with ${playlist.length} parts`);
                     onLinkGenerated({ type: 'playlist', playlist });
                 }
 
@@ -487,11 +488,6 @@ const DropboxUpload = ({ onLinkGenerated }) => {
 
         setIsUploading(false);
         setPlaylistParts(playlist);
-
-        // Update playlist with all completed parts (for parts that finished after first emit)
-        if (playlist.length > 1 && onLinkGenerated) {
-            onLinkGenerated({ type: 'playlist', playlist });
-        }
     };
 
     const uploadSinglePart = (file, partIndex) => {

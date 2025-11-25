@@ -392,17 +392,44 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
 
     // Handle playlist from multi-part upload (called from App.jsx)
     const handleSetPlaylist = (playlistData, skipEmit = false) => {
-        if (!playlistData || playlistData.length === 0) return;
+        console.log('[VideoPlayer] handleSetPlaylist called:', {
+            playlistLength: playlistData?.length,
+            currentPlaylistLength: playlist?.length,
+            skipEmit,
+            firstPartUrl: playlistData?.[0]?.url
+        });
 
+        if (!playlistData || playlistData.length === 0) {
+            console.log('[VideoPlayer] Invalid playlist data, returning');
+            return;
+        }
+
+        const isInitialSet = !playlist || playlist.length === 0;
+        console.log('[VideoPlayer] Is initial playlist set:', isInitialSet);
+
+        console.log('[VideoPlayer] Updating playlist state...');
         setPlaylist(playlistData);
-        setCurrentPartIndex(0);
-        setVideoSrc(playlistData[0].url);
-        setPartDurations([]);
+
+        // Only reset playback state if this is the initial playlist
+        // If we're receiving an updated playlist (more parts added), preserve current state
+        if (isInitialSet) {
+            console.log('[VideoPlayer] Initial playlist - resetting to part 0');
+            setCurrentPartIndex(0);
+            console.log(`[VideoPlayer] Calling setVideoSrc with: ${playlistData[0].url}`);
+            setVideoSrc(playlistData[0].url);
+            setPartDurations([]);
+        } else {
+            console.log('[VideoPlayer] Playlist updated - keeping current playback state');
+        }
+
         setMismatchWarning(false);
 
         // Notify other viewers (only if not already receiving from socket)
         if (socket && !skipEmit) {
+            console.log('[VideoPlayer] Emitting set_playlist to other users');
             socket.emit('set_playlist', { room: roomId, playlist: playlistData });
+        } else {
+            console.log('[VideoPlayer] Skipping emit (skipEmit=true or no socket)');
         }
     };
 
