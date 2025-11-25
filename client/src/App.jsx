@@ -145,16 +145,12 @@ function App() {
                 setVideoSrc(playlistData[0].url);
             }
 
-            // Pass playlist to VideoPlayer
+
+            // Pass playlist to VideoPlayer (which will emit to other users)
             if (window.videoPlayerRef && window.videoPlayerRef.handleSetPlaylist) {
-                window.videoPlayerRef.handleSetPlaylist(playlistData);
+                window.videoPlayerRef.handleSetPlaylist(playlistData); // This will emit to others
             }
             setShowUploadPanel(false);
-
-            // Emit playlist to other users
-            if (socket && roomId) {
-                socket.emit('set_playlist', { room: roomId, playlist: playlistData });
-            }
         } else {
             // Single URL (existing behavior)
             const link = linkOrPlaylist;
