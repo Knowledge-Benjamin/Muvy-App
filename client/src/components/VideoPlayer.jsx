@@ -13,6 +13,12 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
     const [notification, setNotification] = useState('');
     const [mismatchWarning, setMismatchWarning] = useState(false);
 
+    // Multi-part video state
+    const [playlist, setPlaylist] = useState(null);
+    const [currentPartIndex, setCurrentPartIndex] = useState(0);
+    const [partDurations, setPartDurations] = useState([]);
+    const [totalDuration, setTotalDuration] = useState(0);
+
     const checkMismatch = (remoteDuration) => {
         if (!videoRef.current) return;
         const localDuration = videoRef.current.duration;
@@ -213,6 +219,88 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
         }
     };
 
+    // Multi-part video helper functions
+    const isMultiPart = () => playlist && playlist.length > 1;
+
+    const getAccumulatedDuration = (upToPartIndex) => {
+        if (!partDurations.length) return 0;
+        return partDurations.slice(0, upToPartIndex).reduce((sum, dur) => sum + dur, 0);
+    };
+
+    const getCurrentGlobalTime = () => {
+        if (!videoRef.current) return 0;
+        if (!isMultiPart()) return videoRef.current.currentTime;
+
+        const accumulated = getAccumulatedDuration(currentPartIndex);
+        return accumulated + videoRef.current.currentTime;
+    };
+
+    const seekToGlobalTime = (globalTime) => {
+        if (!isMultiPart()) {
+            if (videoRef.current) {
+                videoRef.current.currentTime = globalTime;
+            }
+            return;
+        }
+
+        let accumulatedTime = 0;
+        let targetPartIndex = 0;
+        let timeInPart = globalTime;
+
+        // Calculate which part contains this global time
+        for (let i = 0; i < partDurations.length; i++) {
+            const partDuration = partDurations[i];
+
+            if (globalTime < accumulatedTime + partDuration) {
+                targetPartIndex = i;
+                timeInPart = globalTime - accumulatedTime;
+                break;
+            }
+
+            accumulatedTime += partDuration;
+        }
+
+        // Load correct part if different
+        if (targetPartIndex !== currentPartIndex) {
+            setCurrentPartIndex(targetPartIndex);
+            setVideoSrc(playlist[targetPartIndex].url);
+
+            // After video loads, seek to specific time
+            const handleSeek = () => {
+                if (videoRef.current) {
+                    videoRef.current.currentTime = timeInPart;
+                }
+                videoRef.current?.removeEventListener('loadedmetadata', handleSeek);
+            };
+            videoRef.current?.addEventListener('loadedmetadata', handleSeek);
+        } else {
+            // Same part, just seek
+            if (videoRef.current) {
+                videoRef.current.currentTime = timeInPart;
+            }
+        }
+    };
+
+    const handleVideoEnded = () => {
+        if (isMultiPart() && currentPartIndex < playlist.length - 1) {
+            // Load next part
+            const nextIndex = currentPartIndex + 1;
+            setCurrentPartIndex(nextIndex);
+            setVideoSrc(playlist[nextIndex].url);
+
+            // Notify other viewers
+            if (socket) {
+                socket.emit('load_next_part', {
+                    room: roomId,
+                    partIndex: nextIndex
+                });
+            }
+        } else {
+            // Last part ended or single video
+            setIsPlaying(false);
+        }
+    };
+
     const convertToDirectLink = (url) => {
         // Handle Dropbox sharing links
         if (url.includes('dropbox.com')) {
@@ -256,11 +344,42 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
         url = convertToDirectLink(url);
 
         setVideoSrc(url);
+        setPlaylist(null); // Clear playlist when manual URL is entered
         setMismatchWarning(false);
         if (socket) {
             socket.emit('video_url_change', { room: roomId, url });
         }
     };
+
+    // Handle playlist from multi-part upload (called from App.jsx)
+    const handleSetPlaylist = (playlistData) => {
+        if (!playlistData || playlistData.length === 0) return;
+
+        setPlaylist(playlistData);
+        setCurrentPartIndex(0);
+        setVideoSrc(playlistData[0].url);
+        setPartDurations([]);
+        setMismatchWarning(false);
+
+        // Notify other viewers
+        if (socket) {
+            socket.emit('set_playlist', { room: roomId, playlist: playlistData });
+        }
+    };
+
+    // Register handleSetPlaylist globally for App.jsx access
+    useEffect(() => {
+        if (!window.videoPlayerRef) {
+            window.videoPlayerRef = {};
+        }
+        window.videoPlayerRef.handleSetPlaylist = handleSetPlaylist;
+
+        return () => {
+            if (window.videoPlayerRef) {
+                delete window.videoPlayerRef.handleSetPlaylist;
+            }
+        };
+    }, [playlist, roomId, socket]); // Re-register when dependencies change
 
     return (
         <div className="video-player-container">
@@ -303,7 +422,21 @@ const VideoPlayer = ({ roomId, isHost, videoSrc, setVideoSrc }) => {
                             onPlay={handlePlay}
                             onPause={handlePause}
                             onSeeked={handleSeeked}
-                            onLoadedMetadata={handleLoadedMetadata}
+                            onLoadedMetadata={() => {
+                                handleLoadedMetadata();
+
+                                // Track part duration for multi-part videos
+                                if (isMultiPart() && videoRef.current) {
+                                    const newDurations = [...partDurations];
+                                    newDurations[currentPartIndex] = videoRef.current.duration;
+                                    setPartDurations(newDurations);
+
+                                    // Calculate total duration
+                                    const total = newDurations.reduce((sum, dur) => sum + (dur || 0), 0);
+                                    setTotalDuration(total);
+                                }
+                            }}
+                            onEnded={handleVideoEnded}
                             onError={(e) => {
                                 console.error('Video Error:', e);
                                 setNotification('❌ Error loading video. Please check the URL or try a different file.');

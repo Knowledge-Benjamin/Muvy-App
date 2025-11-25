@@ -134,12 +134,31 @@ function App() {
 
     const isHost = socket && socket.id === hostId;
 
-    const handleLinkGenerated = (link) => {
-        setVideoSrc(link);
-        setShowUploadPanel(false);
-        // Emit URL change to sync with other users in the room
-        if (socket && roomId) {
-            socket.emit('video_url_change', { room: roomId, url: link });
+    const handleLinkGenerated = (linkOrPlaylist) => {
+        // Check if it's a playlist object or a single URL
+        if (linkOrPlaylist && typeof linkOrPlaylist === 'object' && linkOrPlaylist.type === 'playlist') {
+            // Multi-part playlist
+            const playlistData = linkOrPlaylist.playlist;
+            // We need to pass this to VideoPlayer via a ref or callback
+            // For now, store in state and pass to VideoPlayer
+            if (window.videoPlayerRef && window.videoPlayerRef.handleSetPlaylist) {
+                window.videoPlayerRef.handleSetPlaylist(playlistData);
+            }
+            setShowUploadPanel(false);
+
+            // Emit playlist to other users
+            if (socket && roomId) {
+                socket.emit('set_playlist', { room: roomId, playlist: playlistData });
+            }
+        } else {
+            // Single URL (existing behavior)
+            const link = linkOrPlaylist;
+            setVideoSrc(link);
+            setShowUploadPanel(false);
+            // Emit URL change to sync with other users in the room
+            if (socket && roomId) {
+                socket.emit('video_url_change', { room: roomId, url: link });
+            }
         }
     };
 
